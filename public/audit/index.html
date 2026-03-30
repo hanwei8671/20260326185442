@@ -266,14 +266,15 @@
         </div>
     </div>
 
-    <!-- 添加内审员模态框 -->
+    <!-- 添加/编辑内审员模态框 -->
     <div id="modal-create-auditor" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between p-4 border-b">
-                <h3 class="text-lg font-bold text-gray-800">添加内审员</h3>
+                <h3 class="text-lg font-bold text-gray-800" id="auditor-modal-title">添加内审员</h3>
                 <button onclick="closeModal('modal-create-auditor')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
             </div>
             <form id="form-create-auditor" class="p-4 space-y-4">
+                <input type="hidden" id="edit-auditor-id">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
@@ -327,11 +328,33 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
                     <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
                 </div>
-                <div class="flex justify-end gap-2 pt-4 border-t">
-                    <button type="button" onclick="closeModal('modal-create-auditor')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">添加</button>
+                <div class="flex justify-between gap-2 pt-4 border-t">
+                    <button type="button" onclick="deleteAuditor()" id="btn-delete-auditor" class="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg text-sm hidden">
+                        <i class="ri-delete-bin-line mr-1"></i>删除
+                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal('modal-create-auditor')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                        <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm" id="auditor-submit-btn">添加</button>
+                    </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 不符合项详情模态框 -->
+    <div id="modal-view-nc" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">不符合项详情</h3>
+                <button onclick="closeModal('modal-view-nc')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <div class="p-4" id="nc-detail-content">
+                加载中...
+            </div>
+            <div class="flex justify-end gap-2 p-4 border-t">
+                <button onclick="closeModal('modal-view-nc')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">关闭</button>
+                <button onclick="goToPlanDetail()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">编辑</button>
+            </div>
         </div>
     </div>
 
@@ -361,12 +384,20 @@
         }
         
         function showCreateAuditorModal() {
+            document.getElementById('auditor-modal-title').textContent = '添加内审员';
+            document.getElementById('auditor-submit-btn').textContent = '添加';
+            document.getElementById('edit-auditor-id').value = '';
+            document.getElementById('btn-delete-auditor').classList.add('hidden');
+            document.getElementById('form-create-auditor').reset();
             document.getElementById('modal-create-auditor').style.display = 'flex';
         }
-        
+
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
         }
+
+        // 当前查看的不符合项所属计划ID
+        let currentNCPlanId = null;
 
         // 状态映射
         const statusMap = {
@@ -552,24 +583,200 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             data.specialty_areas = data.specialty_areas ? data.specialty_areas.split(',').map(s => s.trim()) : [];
-            
-            const res = await fetch('/audit/api/auditors', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
+
+            const editId = document.getElementById('edit-auditor-id').value;
+            let res;
+
+            if (editId) {
+                // 编辑模式
+                res = await fetch(`/audit/api/auditors/${editId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                // 新建模式
+                res = await fetch('/audit/api/auditors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+
             const result = await res.json();
-            if (result.id) {
+            if (result.id || result.message) {
                 closeModal('modal-create-auditor');
                 loadAuditors();
                 loadDashboard();
                 e.target.reset();
-                alert('添加成功');
+                alert(editId ? '更新成功' : '添加成功');
             } else {
-                alert('添加失败: ' + (result.error || '未知错误'));
+                alert((editId ? '更新' : '添加') + '失败: ' + (result.error || '未知错误'));
             }
         });
+
+        // 查看计划详情
+        function viewPlan(id) {
+            window.location.href = `plan-detail.html?id=${id}`;
+        }
+
+        // 删除计划
+        async function deletePlan(id) {
+            if (!confirm('确定要删除此内审计划吗？\n\n此操作将同时删除该计划下的所有不符合项和内审组成员信息，且不可恢复！')) return;
+
+            const res = await fetch(`/audit/api/audit-plans/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await res.json();
+            if (result.message) {
+                loadPlans();
+                loadDashboard();
+                alert('已删除内审计划');
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        }
+
+        // 查看不符合项详情
+        async function viewNC(id) {
+            const res = await fetch(`/audit/api/nonconformities/${id}`);
+            const { data } = await res.json();
+
+            if (!data) {
+                alert('不符合项不存在');
+                return;
+            }
+
+            currentNCPlanId = data.plan_id;
+
+            const content = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${ncCategoryMap[data.category]?.class}">${data.category}</span>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${ncStatusMap[data.status]?.class}">${ncStatusMap[data.status]?.text || data.status}</span>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">编号</p>
+                        <p class="font-medium">${data.nc_number}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">问题描述</p>
+                        <p class="font-medium">${data.title}</p>
+                        <p class="text-gray-600 mt-1">${data.description || '-'}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">条款引用</p>
+                            <p class="font-medium">${data.clause_reference || '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">过程区域</p>
+                            <p class="font-medium">${data.process_area || '-'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">客观证据</p>
+                        <p class="text-gray-600">${data.evidence || '-'}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">责任人</p>
+                            <p class="font-medium">${data.responsible_person || '-'}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">截止日期</p>
+                            <p class="font-medium">${data.due_date || '-'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">所属计划</p>
+                        <p class="font-medium">${data.plan_number || '-'}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('nc-detail-content').innerHTML = content;
+            document.getElementById('modal-view-nc').style.display = 'flex';
+        }
+
+        // 跳转到计划详情页编辑
+        function goToPlanDetail() {
+            if (currentNCPlanId) {
+                window.location.href = `plan-detail.html?id=${currentNCPlanId}`;
+            }
+        }
+
+        // 编辑内审员
+        async function editAuditor(id) {
+            const res = await fetch(`/audit/api/auditors/${id}`);
+            const { data } = await res.json();
+
+            if (!data) {
+                alert('内审员不存在');
+                return;
+            }
+
+            document.getElementById('auditor-modal-title').textContent = '编辑内审员';
+            document.getElementById('auditor-submit-btn').textContent = '保存';
+            document.getElementById('edit-auditor-id').value = data.id;
+            document.getElementById('btn-delete-auditor').classList.remove('hidden');
+
+            // 填充表单
+            const form = document.getElementById('form-create-auditor');
+            form.name.value = data.name || '';
+            form.employee_id.value = data.employee_id || '';
+            form.department.value = data.department || '';
+            form.position.value = data.position || '';
+            form.qualification_level.value = data.qualification_level || '正式';
+            form.certificate_number.value = data.certificate_number || '';
+            form.certificate_issue_date.value = data.certificate_issue_date || '';
+            form.certificate_expiry_date.value = data.certificate_expiry_date || '';
+
+            // 处理专业领域
+            let specialtyAreas = '';
+            try {
+                const areas = typeof data.specialty_areas === 'string' ? JSON.parse(data.specialty_areas) : data.specialty_areas;
+                if (Array.isArray(areas)) {
+                    specialtyAreas = areas.join(', ');
+                }
+            } catch (e) {
+                specialtyAreas = data.specialty_areas || '';
+            }
+            form.specialty_areas.value = specialtyAreas;
+            form.notes.value = data.notes || '';
+
+            document.getElementById('modal-create-auditor').style.display = 'flex';
+        }
+
+        // 删除内审员
+        async function deleteAuditor() {
+            const editId = document.getElementById('edit-auditor-id').value;
+            if (!editId) return;
+
+            const auditorName = document.getElementById('form-create-auditor').name.value;
+            if (!confirm(`确定要删除内审员"${auditorName}"吗？\n\n此操作不可恢复！`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/audit/api/auditors/${editId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await res.json();
+                if (result.message) {
+                    closeModal('modal-create-auditor');
+                    loadAuditors();
+                    loadDashboard();
+                    alert('已删除内审员');
+                } else {
+                    alert('删除失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
 
         // 初始化
         loadDashboard();

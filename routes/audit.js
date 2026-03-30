@@ -3,8 +3,40 @@
  */
 const express = require('express');
 const router = express.Router();
-const db = require('../database/db');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+const fs = require('fs');
 const logger = require('../utils/logger');
+
+// 初始化内审数据库
+const auditDbPath = process.env.AUDIT_DB_PATH || './data/audit_database.db';
+const auditDbDir = path.dirname(auditDbPath);
+
+if (!fs.existsSync(auditDbDir)) {
+    fs.mkdirSync(auditDbDir, { recursive: true });
+}
+
+const db = new sqlite3.Database(auditDbPath);
+
+// 初始化数据库表
+function initDatabase() {
+    const schemaPath = path.join(__dirname, '../database/audit_schema.sql');
+    const schema = fs.readFileSync(schemaPath, 'utf8');
+    
+    // 分割并执行每个CREATE语句
+    const statements = schema.split(';').filter(s => s.trim());
+    statements.forEach(sql => {
+        db.run(sql, (err) => {
+            if (err && !err.message.includes('already exists')) {
+                logger.error('初始化内审数据库表失败:', err.message);
+            }
+        });
+    });
+    logger.info('内审数据库初始化完成');
+}
+
+// 启动时初始化
+initDatabase();
 
 // ==================== 内审员管理 ====================
 
@@ -109,11 +141,11 @@ router.put('/api/auditors/:id', (req, res) => {
 
 // 删除内审员
 router.delete('/api/auditors/:id', (req, res) => {
-    db.run(`UPDATE auditors SET status = 'inactive' WHERE id = ?`, [req.params.id], function(err) {
+    db.run(`DELETE FROM auditors WHERE id = ?`, [req.params.id], function(err) {
         if (err) {
             return res.status(500).json({ error: err.message });
         }
-        res.json({ message: '已停用' });
+        res.json({ message: '已删除' });
     });
 });
 
@@ -191,15 +223,15 @@ router.post('/api/audit-plans', (req, res) => {
         audit_criteria, planned_start_date, planned_end_date,
         lead_auditor_id, purpose, team_members
     } = req.body;
-    
+
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
-        
-        const planSql = `INSERT INTO audit_plans 
+
+        const planSql = `INSERT INTO audit_plans
             (plan_number, plan_name, audit_type, audit_scope, audit_criteria,
              planned_start_date, planned_end_date, lead_auditor_id, purpose)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        
+
         db.run(planSql, [
             plan_number, plan_name, audit_type, audit_scope, audit_criteria,
             planned_start_date, planned_end_date, lead_auditor_id, purpose
@@ -208,23 +240,50 @@ router.post('/api/audit-plans', (req, res) => {
                 db.run('ROLLBACK');
                 return res.status(500).json({ error: err.message });
             }
-            
+
             const planId = this.lastID;
-            
+
             // 添加内审组成员
             if (team_members && team_members.length > 0) {
                 const teamSql = `INSERT INTO audit_team_members (plan_id, auditor_id, role, assigned_processes) VALUES (?, ?, ?, ?)`;
                 const stmt = db.prepare(teamSql);
-                
+
                 team_members.forEach(member => {
                     stmt.run([planId, member.auditor_id, member.role, JSON.stringify(member.assigned_processes)]);
                 });
                 stmt.finalize();
             }
-            
+
             db.run('COMMIT');
             res.json({ id: planId, message: '创建成功' });
         });
+    });
+});
+
+// ==================== 内审组成员管理 ====================
+
+// 添加内审组成员
+router.post('/api/audit-team-members', (req, res) => {
+    const { plan_id, auditor_id, role, assigned_processes } = req.body;
+
+    const sql = `INSERT INTO audit_team_members (plan_id, auditor_id, role, assigned_processes)
+                 VALUES (?, ?, ?, ?)`;
+
+    db.run(sql, [plan_id, auditor_id, role || '内审员', JSON.stringify(assigned_processes || [])], function(err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ id: this.lastID, message: '添加成功' });
+    });
+});
+
+// 删除内审组成员
+router.delete('/api/audit-team-members/:id', (req, res) => {
+    db.run(`DELETE FROM audit_team_members WHERE id = ?`, [req.params.id], function(err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: '已删除' });
     });
 });
 
@@ -241,6 +300,58 @@ router.put('/api/audit-plans/:id/status', (req, res) => {
             res.json({ message: '状态已更新' });
         }
     );
+});
+
+// 删除内审计划（级联删除相关数据）
+router.delete('/api/audit-plans/:id', (req, res) => {
+    const planId = req.params.id;
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+
+        // 删除相关的不符合项
+        db.run(`DELETE FROM nonconformities WHERE plan_id = ?`, [planId], (err) => {
+            if (err) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ error: err.message });
+            }
+
+            // 删除内审组成员
+            db.run(`DELETE FROM audit_team_members WHERE plan_id = ?`, [planId], (err) => {
+                if (err) {
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ error: err.message });
+                }
+
+                // 删除审核记录
+                db.run(`DELETE FROM audit_records WHERE plan_id = ?`, [planId], (err) => {
+                    if (err) {
+                        db.run('ROLLBACK');
+                        return res.status(500).json({ error: err.message });
+                    }
+
+                    // 删除审核日程
+                    db.run(`DELETE FROM audit_schedule WHERE plan_id = ?`, [planId], (err) => {
+                        if (err) {
+                            db.run('ROLLBACK');
+                            return res.status(500).json({ error: err.message });
+                        }
+
+                        // 最后删除计划本身
+                        db.run(`DELETE FROM audit_plans WHERE id = ?`, [planId], function(err) {
+                            if (err) {
+                                db.run('ROLLBACK');
+                                return res.status(500).json({ error: err.message });
+                            }
+
+                            db.run('COMMIT');
+                            res.json({ message: '已删除' });
+                        });
+                    });
+                });
+            });
+        });
+    });
 });
 
 // ==================== 不符合项管理 ====================
@@ -275,6 +386,25 @@ router.get('/api/nonconformities', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         res.json({ data: rows });
+    });
+});
+
+// 获取单个不符合项
+router.get('/api/nonconformities/:id', (req, res) => {
+    const sql = `
+        SELECT n.*, p.plan_number, p.plan_name
+        FROM nonconformities n
+        LEFT JOIN audit_plans p ON n.plan_id = p.id
+        WHERE n.id = ?`;
+    
+    db.get(sql, [req.params.id], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        if (!row) {
+            return res.status(404).json({ error: '不符合项不存在' });
+        }
+        res.json({ data: row });
     });
 });
 
@@ -315,14 +445,14 @@ router.put('/api/nonconformities/:id', (req, res) => {
         responsible_person, due_date, completion_date,
         verification_result, status
     } = req.body;
-    
-    const sql = `UPDATE nonconformities SET 
+
+    const sql = `UPDATE nonconformities SET
         title = ?, description = ?, category = ?, clause_reference = ?, process_area = ?,
         root_cause = ?, correction = ?, corrective_action = ?, preventive_action = ?,
         responsible_person = ?, due_date = ?, completion_date = ?,
         verification_result = ?, status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?`;
-    
+
     db.run(sql, [
         title, description, category, clause_reference, process_area,
         root_cause, correction, corrective_action, preventive_action,
@@ -333,6 +463,16 @@ router.put('/api/nonconformities/:id', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         res.json({ message: '更新成功' });
+    });
+});
+
+// 删除不符合项
+router.delete('/api/nonconformities/:id', (req, res) => {
+    db.run(`DELETE FROM nonconformities WHERE id = ?`, [req.params.id], function(err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ message: '已删除' });
     });
 });
 

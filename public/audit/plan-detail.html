@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内审计划详情 - 内审管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/audit/" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">内审计划详情</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/audit/" class="bg-white/20 text-white px-4 py-2 rounded-lg text-sm hover:bg-white/30 transition">
+                        <i class="ri-arrow-left-line mr-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 计划基本信息 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-gray-800">
+                    <i class="ri-file-list-3-line mr-2 text-blue-600"></i>
+                    <span id="plan-number">加载中...</span>
+                </h2>
+                <span id="plan-status" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500">计划名称</p>
+                    <p class="font-medium text-gray-800" id="plan-name">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">审核类型</p>
+                    <p class="font-medium text-gray-800" id="plan-type">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">内审组长</p>
+                    <p class="font-medium text-gray-800" id="plan-leader">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">计划日期</p>
+                    <p class="font-medium text-gray-800" id="plan-dates">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">审核范围</p>
+                    <p class="font-medium text-gray-800" id="plan-scope">-</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">审核目的</p>
+                    <p class="font-medium text-gray-800" id="plan-purpose">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内审组成员 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800">
+                    <i class="ri-team-line mr-2 text-emerald-600"></i>内审组成员
+                </h3>
+                <button onclick="showAddTeamMemberModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm transition">
+                    <i class="ri-add-line mr-1"></i>添加成员
+                </button>
+            </div>
+            <div class="p-4">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">姓名</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">工号</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">部门</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">资质等级</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">角色</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">分配过程</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-table-body">
+                        <tr><td colspan="7" class="text-center py-4 text-gray-500">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 不符合项列表 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-gray-800">
+                    <i class="ri-error-warning-line mr-2 text-red-600"></i>不符合项
+                    <span id="nc-count" class="text-sm font-normal text-gray-500 ml-2">(0)</span>
+                </h3>
+                <div class="flex gap-2">
+                    <button onclick="exportNCs()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition">
+                        <i class="ri-download-line mr-1"></i>导出Excel
+                    </button>
+                    <button onclick="showAddNCModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">
+                        <i class="ri-add-line mr-1"></i>录入不符合项
+                    </button>
+                </div>
+            </div>
+            <div class="p-4">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">编号</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">问题描述</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">严重程度</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">过程区域</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">责任人</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">截止日期</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">状态</th>
+                            <th class="px-4 py-2 text-left font-medium text-gray-600">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nc-table-body">
+                        <tr><td colspan="8" class="text-center py-4 text-gray-500">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加内审组成员模态框 -->
+    <div id="modal-add-member" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">添加内审组成员</h3>
+                <button onclick="closeModal('modal-add-member')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-add-member" class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">选择内审员 *</label>
+                    <select name="auditor_id" id="select-member-auditor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                        <option value="">请选择</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">角色</label>
+                    <select name="role" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="内审员">内审员</option>
+                        <option value="组长">组长</option>
+                        <option value="实习内审员">实习内审员</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">分配过程</label>
+                    <input type="text" name="assigned_processes" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：设计开发,生产制造">
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-add-member')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 录入不符合项模态框 -->
+    <div id="modal-add-nc" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">录入不符合项</h3>
+                <button onclick="closeModal('modal-add-nc')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-add-nc" class="p-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">不符合项编号</label>
+                        <input type="text" name="nc_number" id="input-nc-number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">严重程度 *</label>
+                        <select name="category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                            <option value="严重">严重</option>
+                            <option value="一般" selected>一般</option>
+                            <option value="观察项">观察项</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">问题标题 *</label>
+                    <input type="text" name="title" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required placeholder="简要描述不符合项">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">问题描述 *</label>
+                    <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required placeholder="详细描述不符合项的具体情况"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">条款引用</label>
+                        <input type="text" name="clause_reference" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：ISO 13485 7.3.2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">过程区域</label>
+                        <input type="text" name="process_area" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：设计开发">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">客观证据</label>
+                    <textarea name="evidence" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="审核中发现的客观证据"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">原因分析</label>
+                    <textarea name="root_cause" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="不符合项产生的根本原因"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">纠正措施</label>
+                        <textarea name="corrective_action" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="消除不符合的措施"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">预防措施</label>
+                        <textarea name="preventive_action" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="防止再次发生的措施"></textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任人</label>
+                        <input type="text" name="responsible_person" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="负责整改的人员">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">整改截止日期</label>
+                        <input type="date" name="due_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-add-nc')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 查看/编辑不符合项模态框 -->
+    <div id="modal-edit-nc" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">不符合项详情</h3>
+                <button onclick="closeModal('modal-edit-nc')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-edit-nc" class="p-4 space-y-4">
+                <input type="hidden" name="nc_id" id="edit-nc-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">不符合项编号</label>
+                        <input type="text" id="edit-nc-number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">严重程度</label>
+                        <select name="category" id="edit-nc-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="严重">严重</option>
+                            <option value="一般">一般</option>
+                            <option value="观察项">观察项</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">问题标题</label>
+                    <input type="text" name="title" id="edit-nc-title" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">问题描述</label>
+                    <textarea name="description" id="edit-nc-description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">条款引用</label>
+                        <input type="text" name="clause_reference" id="edit-nc-clause" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">过程区域</label>
+                        <input type="text" name="process_area" id="edit-nc-process" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">客观证据</label>
+                    <textarea name="evidence" id="edit-nc-evidence" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">原因分析</label>
+                    <textarea name="root_cause" id="edit-nc-root-cause" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">纠正措施</label>
+                        <textarea name="corrective_action" id="edit-nc-corrective" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">预防措施</label>
+                        <textarea name="preventive_action" id="edit-nc-preventive" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任人</label>
+                        <input type="text" name="responsible_person" id="edit-nc-responsible" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">整改截止日期</label>
+                        <input type="date" name="due_date" id="edit-nc-due-date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">完成日期</label>
+                        <input type="date" name="completion_date" id="edit-nc-completion" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select name="status" id="edit-nc-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="open">待整改</option>
+                            <option value="in_progress">整改中</option>
+                            <option value="corrected">已整改</option>
+                            <option value="verified">已验证</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">验证结果</label>
+                    <textarea name="verification_result" id="edit-nc-verification" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="验证整改效果的结论"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-edit-nc')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">保存修改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const planId = urlParams.get('id');
+
+        if (!planId) {
+            alert('缺少计划ID参数');
+            window.location.href = '/audit/';
+        }
+
+        // 状态映射
+        const statusMap = {
+            'planning': { text: '计划中', class: 'bg-gray-100 text-gray-700' },
+            'scheduled': { text: '已安排', class: 'bg-blue-100 text-blue-700' },
+            'in_progress': { text: '进行中', class: 'bg-amber-100 text-amber-700' },
+            'completed': { text: '已完成', class: 'bg-green-100 text-green-700' },
+            'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-500' }
+        };
+
+        const ncStatusMap = {
+            'open': { text: '待整改', class: 'bg-red-100 text-red-700' },
+            'in_progress': { text: '整改中', class: 'bg-amber-100 text-amber-700' },
+            'corrected': { text: '已整改', class: 'bg-blue-100 text-blue-700' },
+            'verified': { text: '已验证', class: 'bg-green-100 text-green-700' },
+            'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-500' }
+        };
+
+        const ncCategoryMap = {
+            '严重': { class: 'bg-red-100 text-red-700' },
+            '一般': { class: 'bg-amber-100 text-amber-700' },
+            '观察项': { class: 'bg-blue-100 text-blue-700' }
+        };
+
+        // 模态框操作
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // 加载计划详情
+        async function loadPlanDetail() {
+            const res = await fetch(`/audit/api/audit-plans/${planId}`);
+            const { data } = await res.json();
+
+            if (!data) {
+                alert('计划不存在');
+                window.location.href = '/audit/';
+                return;
+            }
+
+            // 基本信息
+            document.getElementById('plan-number').textContent = data.plan_number;
+            document.getElementById('plan-name').textContent = data.plan_name;
+            document.getElementById('plan-type').textContent = data.audit_type || '-';
+            document.getElementById('plan-leader').textContent = data.lead_auditor_name || '-';
+            document.getElementById('plan-dates').textContent = 
+                `${data.planned_start_date || '-'} ~ ${data.planned_end_date || '-'}`;
+            document.getElementById('plan-scope').textContent = data.audit_scope || '-';
+            document.getElementById('plan-purpose').textContent = data.purpose || '-';
+
+            // 状态
+            const statusEl = document.getElementById('plan-status');
+            statusEl.textContent = statusMap[data.status]?.text || data.status;
+            statusEl.className = `px-3 py-1 rounded-full text-sm font-medium ${statusMap[data.status]?.class}`;
+
+            // 内审组成员
+            const teamBody = document.getElementById('team-table-body');
+            if (data.team && data.team.length > 0) {
+                teamBody.innerHTML = data.team.map(t => `
+                    <tr class="border-b border-gray-100">
+                        <td class="px-4 py-2 font-medium">${t.name}</td>
+                        <td class="px-4 py-2">${t.employee_id || '-'}</td>
+                        <td class="px-4 py-2">${t.department || '-'}</td>
+                        <td class="px-4 py-2">${t.qualification_level || '-'}</td>
+                        <td class="px-4 py-2">${t.role || '-'}</td>
+                        <td class="px-4 py-2">${t.assigned_processes ? JSON.parse(t.assigned_processes).join(', ') : '-'}</td>
+                        <td class="px-4 py-2">
+                            <button onclick="removeTeamMember(${t.id})" class="text-red-600 hover:text-red-800"><i class="ri-delete-bin-line"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                teamBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">暂无成员</td></tr>';
+            }
+        }
+
+        // 加载不符合项
+        async function loadNCs() {
+            const res = await fetch(`/audit/api/nonconformities?plan_id=${planId}`);
+            const { data } = await res.json();
+
+            document.getElementById('nc-count').textContent = `(${data?.length || 0})`;
+
+            const tbody = document.getElementById('nc-table-body');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">暂无不符合项</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(n => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-2 font-medium text-blue-600">${n.nc_number}</td>
+                    <td class="px-4 py-2 max-w-xs truncate">${n.title}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 py-1 rounded-full text-xs ${ncCategoryMap[n.category]?.class}">${n.category}</span>
+                    </td>
+                    <td class="px-4 py-2">${n.process_area || '-'}</td>
+                    <td class="px-4 py-2">${n.responsible_person || '-'}</td>
+                    <td class="px-4 py-2">${n.due_date || '-'}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 py-1 rounded-full text-xs ${ncStatusMap[n.status]?.class}">${ncStatusMap[n.status]?.text || n.status}</span>
+                    </td>
+                    <td class="px-4 py-2">
+                        <button onclick="editNC(${n.id})" class="text-blue-600 hover:text-blue-800 mr-2"><i class="ri-edit-line"></i></button>
+                        <button onclick="deleteNC(${n.id})" class="text-red-600 hover:text-red-800"><i class="ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 生成不符合项编号
+        async function generateNCNumber() {
+            const res = await fetch(`/audit/api/generate-nc-number/${planId}`);
+            const { number } = await res.json();
+            document.getElementById('input-nc-number').value = number;
+        }
+
+        // 显示录入不符合项模态框
+        function showAddNCModal() {
+            document.getElementById('form-add-nc').reset();
+            document.getElementById('modal-add-nc').style.display = 'flex';
+            generateNCNumber();
+        }
+
+        // 编辑不符合项
+        async function editNC(id) {
+            const res = await fetch(`/audit/api/nonconformities/${id}`);
+            const { data } = await res.json();
+
+            if (!data) {
+                alert('不符合项不存在');
+                return;
+            }
+
+            document.getElementById('edit-nc-id').value = data.id;
+            document.getElementById('edit-nc-number').value = data.nc_number;
+            document.getElementById('edit-nc-category').value = data.category;
+            document.getElementById('edit-nc-title').value = data.title;
+            document.getElementById('edit-nc-description').value = data.description || '';
+            document.getElementById('edit-nc-clause').value = data.clause_reference || '';
+            document.getElementById('edit-nc-process').value = data.process_area || '';
+            document.getElementById('edit-nc-evidence').value = data.evidence || '';
+            document.getElementById('edit-nc-root-cause').value = data.root_cause || '';
+            document.getElementById('edit-nc-corrective').value = data.corrective_action || '';
+            document.getElementById('edit-nc-preventive').value = data.preventive_action || '';
+            document.getElementById('edit-nc-responsible').value = data.responsible_person || '';
+            document.getElementById('edit-nc-due-date').value = data.due_date || '';
+            document.getElementById('edit-nc-completion').value = data.completion_date || '';
+            document.getElementById('edit-nc-status').value = data.status;
+            document.getElementById('edit-nc-verification').value = data.verification_result || '';
+
+            document.getElementById('modal-edit-nc').style.display = 'flex';
+        }
+
+        // 提交不符合项
+        document.getElementById('form-add-nc').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            data.plan_id = planId;
+
+            const res = await fetch('/audit/api/nonconformities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.id) {
+                closeModal('modal-add-nc');
+                loadNCs();
+                alert('录入成功');
+            } else {
+                alert('录入失败: ' + (result.error || '未知错误'));
+            }
+        });
+
+        // 更新不符合项
+        document.getElementById('form-edit-nc').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            const ncId = document.getElementById('edit-nc-id').value;
+
+            const res = await fetch(`/audit/api/nonconformities/${ncId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.message) {
+                closeModal('modal-edit-nc');
+                loadNCs();
+                alert('更新成功');
+            } else {
+                alert('更新失败: ' + (result.error || '未知错误'));
+            }
+        });
+
+        // 显示添加成员模态框
+        async function showAddTeamMemberModal() {
+            const res = await fetch('/audit/api/auditors?status=active');
+            const { data } = await res.json();
+            const select = document.getElementById('select-member-auditor');
+            select.innerHTML = '<option value="">请选择</option>' +
+                data.map(a => `<option value="${a.id}">${a.name} (${a.department || '-'})</option>`).join('');
+            document.getElementById('modal-add-member').style.display = 'flex';
+        }
+
+        // 添加成员表单提交
+        document.getElementById('form-add-member').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            data.plan_id = planId;
+            data.assigned_processes = data.assigned_processes ? data.assigned_processes.split(',').map(s => s.trim()) : [];
+
+            const res = await fetch('/audit/api/audit-team-members', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.id || result.message) {
+                closeModal('modal-add-member');
+                loadPlanDetail();
+                alert('添加成功');
+            } else {
+                alert('添加失败: ' + (result.error || '未知错误'));
+            }
+        });
+
+        // 删除成员
+        async function removeTeamMember(memberId) {
+            if (!confirm('确定要移除此成员吗？')) return;
+
+            const res = await fetch(`/audit/api/audit-team-members/${memberId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await res.json();
+            if (result.message) {
+                loadPlanDetail();
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        }
+
+        // 删除不符合项
+        async function deleteNC(id) {
+            if (!confirm('确定要删除此不符合项吗？\n\n此操作不可恢复！')) return;
+
+            const res = await fetch(`/audit/api/nonconformities/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await res.json();
+            if (result.message) {
+                loadNCs();
+                alert('已删除');
+            } else {
+                alert('删除失败: ' + (result.error || '未知错误'));
+            }
+        }
+
+        // 导出不符合项
+        async function exportNCs() {
+            const res = await fetch(`/audit/api/nonconformities?plan_id=${planId}`);
+            const { data } = await res.json();
+
+            if (!data || data.length === 0) {
+                alert('没有不符合项数据可导出');
+                return;
+            }
+
+            // 获取计划编号
+            const planRes = await fetch(`/audit/api/audit-plans/${planId}`);
+            const { data: plan } = await planRes.json();
+            const planNumber = plan?.plan_number || 'unknown';
+
+            // 准备导出数据
+            const exportData = data.map((n, index) => ({
+                '序号': index + 1,
+                '不符合项编号': n.nc_number,
+                '问题标题': n.title,
+                '问题描述': n.description || '',
+                '严重程度': n.category,
+                '条款引用': n.clause_reference || '',
+                '过程区域': n.process_area || '',
+                '客观证据': n.evidence || '',
+                '原因分析': n.root_cause || '',
+                '纠正措施': n.corrective_action || '',
+                '预防措施': n.preventive_action || '',
+                '责任人': n.responsible_person || '',
+                '截止日期': n.due_date || '',
+                '完成日期': n.completion_date || '',
+                '状态': ncStatusMap[n.status]?.text || n.status,
+                '验证结果': n.verification_result || '',
+                '创建日期': n.created_at || ''
+            }));
+
+            // 使用 SheetJS 导出
+            const script = document.createElement('script');
+            script.src = 'https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js';
+            script.onload = () => {
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(exportData);
+
+                // 设置列宽
+                ws['!cols'] = [
+                    { wch: 5 }, { wch: 20 }, { wch: 30 }, { wch: 40 },
+                    { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 40 },
+                    { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 10 },
+                    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 15 }
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, '不符合项');
+                XLSX.writeFile(wb, `NC_${planNumber}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            };
+            document.head.appendChild(script);
+        }
+
+        // 初始化
+        loadPlanDetail();
+        loadNCs();
+    </script>
+</body>
+</html>
