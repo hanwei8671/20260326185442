@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞品管理 - MDR Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .keyword-tag { transition: all 0.2s; }
+        .keyword-tag:hover { transform: scale(1.05); }
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #fff; transition: all 0.3s; transform: translateX(-50%); }
+        .nav-link:hover::after { width: 80%; }
+        .nav-link.active::after { width: 80%; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                    </a>
+                    <span class="text-lg opacity-80">|</span>
+                    <span class="text-base font-medium">竞品管理</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/dashboard.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">仪表板</a>
+                    <a href="/events.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">事件检索</a>
+                    <a href="/competitors.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium active">竞品管理</a>
+                    <button onclick="showAddCompetitorModal()" class="bg-white text-blue-700 px-4 py-2 rounded hover:bg-gray-100 transition font-medium">
+                        <i class="ri-add-line mr-2"></i>添加竞品
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 分类筛选 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap gap-2">
+                <button onclick="filterByCategory('')" class="category-btn px-4 py-2 rounded-lg bg-blue-600 text-white" data-category="">
+                    全部
+                </button>
+                <button onclick="filterByCategory('biliary_scope')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" data-category="biliary_scope">
+                    胆道镜
+                </button>
+                <button onclick="filterByCategory('bronchoscope')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" data-category="bronchoscope">
+                    气管镜
+                </button>
+                <button onclick="filterByCategory('urology_scope')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" data-category="urology_scope">
+                    泌尿镜
+                </button>
+                <button onclick="filterByCategory('image_processor')" class="category-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300" data-category="image_processor">
+                    图像处理器
+                </button>
+            </div>
+        </div>
+
+        <!-- 竞品列表 -->
+        <div id="competitorList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-gray-500 text-center py-8 col-span-full">加载中...</p>
+        </div>
+    </div>
+
+    <!-- 编辑竞品弹窗 -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800" id="modalTitle">编辑竞品</h3>
+                    <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="competitorForm">
+                    <input type="hidden" id="editCompetitorId">
+                    <input type="hidden" id="editSource">
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ID *</label>
+                            <input type="text" id="editId" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">名称 *</label>
+                            <input type="text" id="editName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">制造商</label>
+                            <input type="text" id="editManufacturer" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">分类 *</label>
+                            <select id="editCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                <option value="biliary_scope">胆道镜</option>
+                                <option value="bronchoscope">气管镜</option>
+                                <option value="urology_scope">泌尿镜</option>
+                                <option value="image_processor">图像处理器</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">器械类别</label>
+                            <input type="text" id="editDeviceClass" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 Class II">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">产品编码</label>
+                            <input type="text" id="editProductCode" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 KMQ">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            关键词
+                            <span class="text-gray-500 text-xs">(用于匹配FDA不良事件)</span>
+                        </label>
+                        <div class="border border-gray-300 rounded-lg p-3 bg-gray-50">
+                            <div id="keywordTags" class="flex flex-wrap gap-2 mb-2">
+                                <!-- 关键词标签将在这里动态添加 -->
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="newKeyword" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="输入关键词后回车添加">
+                                <button type="button" onclick="addKeyword()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                    添加
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            取消
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加竞品弹窗 -->
+    <div id="addModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">添加新竞品</h3>
+                    <button onclick="closeAddModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="ri-close-line text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="addCompetitorForm">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ID *</label>
+                            <input type="text" id="addId" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="唯一标识符，如 my-device" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">名称 *</label>
+                            <input type="text" id="addName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 MyDevice" required>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">制造商</label>
+                            <input type="text" id="addManufacturer" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 ABC Corp">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">分类 *</label>
+                            <select id="addCategory" class="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
+                                <option value="">选择分类</option>
+                                <option value="biliary_scope">胆道镜</option>
+                                <option value="bronchoscope">气管镜</option>
+                                <option value="urology_scope">泌尿镜</option>
+                                <option value="image_processor">图像处理器</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">器械类别</label>
+                            <input type="text" id="addDeviceClass" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 Class II">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">产品编码</label>
+                            <input type="text" id="addProductCode" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 KMQ">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">关键词<span class="text-gray-500 text-xs">(用逗号分隔)</span></label>
+                        <input type="text" id="addKeywords" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="如 keyword1, keyword2, keyword3">
+                    </div>
+                    
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            取消
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            添加
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allCompetitors = [];
+        let currentCategory = '';
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', loadCompetitors);
+        
+        // 加载竞品列表
+        async function loadCompetitors() {
+            try {
+                const response = await fetch('/api/competitors');
+                const result = await response.json();
+                
+                if (result.success) {
+                    allCompetitors = result.data;
+                    renderCompetitors();
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                document.getElementById('competitorList').innerHTML = '<p class="text-red-500 text-center py-8 col-span-full">加载失败: ' + error.message + '</p>';
+            }
+        }
+        
+        // 渲染竞品列表
+        function renderCompetitors() {
+            let competitors = allCompetitors;
+            
+            // 筛选分类
+            if (currentCategory) {
+                competitors = competitors.filter(c => c.categoryId === currentCategory);
+            }
+            
+            if (competitors.length === 0) {
+                document.getElementById('competitorList').innerHTML = '<p class="text-gray-500 text-center py-8 col-span-full">暂无竞品</p>';
+                return;
+            }
+            
+            const html = competitors.map(comp => {
+                const keywords = comp.keywords || [];
+                const categoryNames = {
+                    'biliary_scope': '胆道镜',
+                    'bronchoscope': '气管镜',
+                    'urology_scope': '泌尿镜',
+                    'image_processor': '图像处理器'
+                };
+                
+                return `
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-lg text-gray-800">${comp.name}</h3>
+                                <p class="text-sm text-gray-600">${comp.manufacturer || '-'}</p>
+                            </div>
+                            <span class="px-2 py-1 rounded text-xs ${comp.source === 'system' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">
+                                ${comp.source === 'system' ? '系统预设' : '自定义'}
+                            </span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <span class="text-sm text-gray-500">分类: </span>
+                            <span class="text-sm text-gray-700">${categoryNames[comp.categoryId] || comp.category}</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <span class="text-sm text-gray-500">产品编码: </span>
+                            <span class="text-sm text-gray-700">${comp.productCode || '-'}</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <span class="text-sm text-gray-500 block mb-2">关键词</span>
+                            <div class="flex flex-wrap gap-1">
+                                ${keywords.length > 0 ? keywords.map(kw => `
+                                    <span class="keyword-tag px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                        ${kw}
+                                    </span>
+                                `).join('') : '<span class="text-gray-400 text-sm">暂无</span>'}
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2 pt-3 border-t">
+                            <button onclick="editCompetitor('${comp.id}')" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                <i class="ri-edit-line mr-1"></i>编辑
+                            </button>
+                            <button onclick="deleteCompetitor('${comp.id}', '${comp.name}')" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('competitorList').innerHTML = html;
+        }
+        
+        // 筛选分类
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // 更新按钮样式
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                if (btn.dataset.category === category) {
+                    btn.classList.remove('bg-gray-200', 'text-gray-700');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-gray-200', 'text-gray-700');
+                }
+            });
+            
+            renderCompetitors();
+        }
+        
+        // 编辑竞品
+        let editingKeywords = [];
+        
+        function editCompetitor(id) {
+            const comp = allCompetitors.find(c => c.id === id);
+            if (!comp) return;
+            
+            document.getElementById('editCompetitorId').value = id;
+            document.getElementById('editSource').value = comp.source;
+            document.getElementById('editId').value = comp.id;
+            document.getElementById('editId').disabled = comp.source === 'system';
+            document.getElementById('editName').value = comp.name;
+            document.getElementById('editManufacturer').value = comp.manufacturer || '';
+            document.getElementById('editCategory').value = comp.categoryId || 'biliary_scope';
+            document.getElementById('editDeviceClass').value = comp.deviceClass || '';
+            document.getElementById('editProductCode').value = comp.productCode || '';
+            
+            editingKeywords = [...(comp.keywords || [])];
+            renderKeywords();
+            
+            document.getElementById('modalTitle').textContent = comp.source === 'system' ? '编辑系统预设竞品' : '编辑自定义竞品';
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+        
+        // 渲染关键词标签
+        function renderKeywords() {
+            const container = document.getElementById('keywordTags');
+            container.innerHTML = editingKeywords.map((kw, idx) => `
+                <span class="keyword-tag inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+                    ${kw}
+                    <button type="button" onclick="removeKeyword(${idx})" class="ml-1 text-blue-500 hover:text-blue-700">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </span>
+            `).join('');
+        }
+        
+        // 添加关键词
+        function addKeyword() {
+            const input = document.getElementById('newKeyword');
+            const keyword = input.value.trim().toLowerCase();
+            
+            if (keyword && !editingKeywords.includes(keyword)) {
+                editingKeywords.push(keyword);
+                renderKeywords();
+            }
+            
+            input.value = '';
+        }
+        
+        // 删除关键词
+        function removeKeyword(index) {
+            editingKeywords.splice(index, 1);
+            renderKeywords();
+        }
+        
+        // 关闭编辑弹窗
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            document.getElementById('editModal').classList.remove('flex');
+            editingKeywords = [];
+        }
+        
+        // 提交编辑
+        document.getElementById('competitorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('editCompetitorId').value;
+            const updates = {
+                name: document.getElementById('editName').value,
+                manufacturer: document.getElementById('editManufacturer').value,
+                category: document.getElementById('editCategory').value,
+                categoryId: document.getElementById('editCategory').value,
+                deviceClass: document.getElementById('editDeviceClass').value,
+                productCode: document.getElementById('editProductCode').value,
+                keywords: editingKeywords
+            };
+            
+            try {
+                const response = await fetch(`/api/competitors/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('保存成功！');
+                    closeEditModal();
+                    loadCompetitors();
+                } else {
+                    alert('保存失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        });
+        
+        // 回车添加关键词
+        document.getElementById('newKeyword').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addKeyword();
+            }
+        });
+        
+        // 删除竞品
+        async function deleteCompetitor(id, name) {
+            if (!confirm(`确定要删除竞品"${name}"吗？`)) return;
+            
+            try {
+                const response = await fetch(`/api/competitors/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('删除成功！');
+                    loadCompetitors();
+                } else {
+                    alert('删除失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('删除失败: ' + error.message);
+            }
+        }
+        
+        // 显示添加弹窗
+        function showAddCompetitorModal() {
+            document.getElementById('addCompetitorForm').reset();
+            document.getElementById('addModal').classList.remove('hidden');
+            document.getElementById('addModal').classList.add('flex');
+        }
+        
+        // 关闭添加弹窗
+        function closeAddModal() {
+            document.getElementById('addModal').classList.add('hidden');
+            document.getElementById('addModal').classList.remove('flex');
+        }
+        
+        // 提交添加
+        document.getElementById('addCompetitorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const competitorData = {
+                id: document.getElementById('addId').value.trim(),
+                name: document.getElementById('addName').value.trim(),
+                manufacturer: document.getElementById('addManufacturer').value.trim(),
+                category: document.getElementById('addCategory').value,
+                categoryId: document.getElementById('addCategory').value,
+                deviceClass: document.getElementById('addDeviceClass').value.trim(),
+                productCode: document.getElementById('addProductCode').value.trim(),
+                keywords: document.getElementById('addKeywords').value.split(',').map(k => k.trim().toLowerCase()).filter(k => k)
+            };
+            
+            try {
+                const response = await fetch('/api/competitors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(competitorData)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('添加成功！');
+                    closeAddModal();
+                    loadCompetitors();
+                } else {
+                    alert('添加失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('添加失败: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

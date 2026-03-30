@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>不良事件列表 - MDR Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .risk-high { background-color: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .risk-medium { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .risk-low { background-color: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #fff; transition: all 0.3s; transform: translateX(-50%); }
+        .nav-link:hover::after { width: 80%; }
+        .report-content h1 { font-size: 1.5rem; font-weight: bold; margin: 1.5rem 0 0.5rem; color: #1f2937; }
+        .report-content h2 { font-size: 1.25rem; font-weight: bold; margin: 1.2rem 0 0.5rem; color: #1f2937; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.3rem; }
+        .report-content h3 { font-size: 1.1rem; font-weight: bold; margin: 1rem 0 0.4rem; color: #374151; }
+        .report-content p { margin: 0.5rem 0; line-height: 1.7; color: #4b5563; }
+        .report-content ul, .report-content ol { margin: 0.5rem 0 0.5rem 1.5rem; color: #4b5563; }
+        .report-content li { margin: 0.3rem 0; line-height: 1.6; }
+        .report-content table { width: 100%; border-collapse: collapse; margin: 0.8rem 0; }
+        .report-content th, .report-content td { border: 1px solid #e5e7eb; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.875rem; }
+        .report-content th { background: #f3f4f6; font-weight: 600; color: #374151; }
+        .report-content strong { color: #1f2937; }
+        .report-content hr { border: none; border-top: 1px solid #e5e7eb; margin: 1.2rem 0; }
+
+        /* AI 报告模态框 */
+        .report-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .report-modal-overlay.active {
+            display: flex;
+        }
+        .report-modal-dialog {
+            position: relative;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            width: 90vw;
+            max-width: 900px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .report-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .report-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                    </a>
+                    <span class="text-lg opacity-80">|</span>
+                    <span class="text-base font-medium">不良事件列表</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/dashboard.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">仪表板</a>
+                    <a href="/events.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">事件检索</a>
+                    <a href="/competitors.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">竞品管理</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 竞品信息 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800" id="competitorName">加载中...</h1>
+                    <p class="text-gray-500 mt-1" id="competitorInfo"></p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="generateAIReport()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                        <i class="ri-robot-line mr-2"></i>AI分析报告
+                    </button>
+                    <button onclick="exportExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                        <i class="ri-file-excel-line mr-2"></i>导出Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 筛选条件 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="ri-filter-3-line text-blue-500 mr-2"></i>筛选条件
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">快捷选择</label>
+                    <select id="quickRange" onchange="handleQuickRange()" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="30">最近30天</option>
+                        <option value="90">最近90天</option>
+                        <option value="180">最近180天</option>
+                        <option value="365">最近1年</option>
+                        <option value="all">全部</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                    <input type="date" id="startDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                    <input type="date" id="endDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">事件类型</label>
+                    <select id="eventType" onchange="loadEvents()" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">全部</option>
+                        <option value="Injury">伤害</option>
+                        <option value="Malfunction">故障</option>
+                        <option value="Death">死亡</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="loadEvents()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-search mr-2"></i>查询
+                </button>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="text-gray-500 text-sm">事件总数</div>
+                <div class="text-2xl font-bold text-gray-800" id="totalCount">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="text-gray-500 text-sm">伤害事件</div>
+                <div class="text-2xl font-bold text-red-600" id="injuryCount">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="text-gray-500 text-sm">故障事件</div>
+                <div class="text-2xl font-bold text-yellow-600" id="malfunctionCount">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="text-gray-500 text-sm">死亡事件</div>
+                <div class="text-2xl font-bold text-gray-800" id="deathCount">-</div>
+            </div>
+        </div>
+
+        <!-- 事件列表 -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">
+                    <i class="ri-list-check text-blue-500 mr-2"></i>不良事件列表
+                </h2>
+                <span class="text-sm text-gray-500" id="resultCount"></span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">报告号</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">接收日期</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">产品名称</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">事件类型</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">产品问题</th>
+                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-600">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventTable" class="divide-y divide-gray-100">
+                        <!-- 动态填充 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 报告模态框 -->
+    <div id="reportModal" class="report-modal-overlay" onclick="if(event.target===this)closeReportModal()">
+        <div class="report-modal-dialog">
+            <div class="report-modal-header">
+                <h3 style="font-size:1.15rem;font-weight:700;color:#1f2937;margin:0;">
+                    <i class="ri-robot" style="color:#7c3aed;margin-right:8px;"></i>AI 不良事件检索分析报告
+                </h3>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="downloadWordBtn" onclick="downloadReportWord()" style="display:none;background:#2563eb;color:#fff;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;">
+                        <i class="fas fa-file-word" style="margin-right:4px;"></i>下载Word文档
+                    </button>
+                    <button onclick="closeReportModal()" style="background:none;border:none;font-size:24px;color:#9ca3af;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">&times;</button>
+                </div>
+            </div>
+            <div class="report-modal-body">
+                <div id="reportLoading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;">
+                    <div style="width:60px;height:60px;border:4px solid #ede9fe;border-top-color:#7c3aed;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;"></div>
+                    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+                    <p style="color:#6b7280;font-size:1.1rem;">AI 正在分析数据并生成报告，请稍候...</p>
+                    <p style="color:#9ca3af;font-size:0.85rem;margin-top:8px;" id="reportStatus">准备中</p>
+                </div>
+                <div id="reportContent" class="report-content" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const competitorId = urlParams.get('competitorId');
+        
+        let allEvents = [];
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!competitorId) {
+                alert('缺少竞品ID参数');
+                window.location.href = '/';
+                return;
+            }
+            
+            // 读取URL中的日期参数（从首页跳转时通常携带）
+            const urlStartDate = urlParams.get('startDate');
+            const urlEndDate = urlParams.get('endDate');
+            const urlRange = urlParams.get('range');
+            
+            if (urlRange === 'all') {
+                // 全部数据：清空日期，并选中"全部"选项
+                document.getElementById('quickRange').value = 'all';
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+            } else if (urlStartDate && urlEndDate) {
+                // 有具体日期范围：填入日期输入框
+                document.getElementById('startDate').value = urlStartDate;
+                document.getElementById('endDate').value = urlEndDate;
+                
+                // 根据天数差自动选中对应的快捷选项
+                const diffDays = Math.round((new Date(urlEndDate) - new Date(urlStartDate)) / (1000 * 60 * 60 * 24));
+                const quickRange = document.getElementById('quickRange');
+                // 找最接近的选项
+                const closest = [30, 90, 180, 365].find(d => Math.abs(d - diffDays) <= 2) || '';
+                if (closest) quickRange.value = String(closest);
+            }
+            
+            await loadCompetitorInfo();
+            loadEvents();
+        });
+
+        // 加载竞品信息
+        async function loadCompetitorInfo() {
+            try {
+                const response = await fetch(`/api/competitors/${competitorId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const comp = result.data;
+                    document.getElementById('competitorName').textContent = comp.name || '未知竞品';
+                    document.getElementById('competitorInfo').textContent = 
+                        `${comp.category || ''} | ${comp.manufacturer || '未知制造商'}`;
+                }
+            } catch (error) {
+                console.error('加载竞品信息失败:', error);
+            }
+        }
+
+        // 处理快捷选择
+        function handleQuickRange() {
+            const days = document.getElementById('quickRange').value;
+            if (days === 'all') {
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+            } else {
+                const today = new Date();
+                const startDate = new Date(today);
+                startDate.setDate(today.getDate() - parseInt(days));
+                
+                document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+                document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            }
+            loadEvents();
+        }
+
+        // 加载事件列表
+        async function loadEvents() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const eventType = document.getElementById('eventType').value;
+            
+            try {
+                const params = new URLSearchParams();
+                if (competitorId) params.append('competitorId', competitorId);
+                if (startDate) params.append('startDate', startDate);
+                if (endDate) params.append('endDate', endDate);
+                if (eventType) params.append('eventType', eventType);
+                params.append('limit', '1000');
+                
+                const response = await fetch(`/api/events?${params.toString()}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    allEvents = result.data;
+                    updateStatistics(result.data);
+                    renderEventTable(result.data);
+                }
+            } catch (error) {
+                console.error('加载事件失败:', error);
+                alert('加载事件失败: ' + error.message);
+            }
+        }
+
+        // 更新统计
+        function updateStatistics(events) {
+            document.getElementById('totalCount').textContent = events.length;
+            document.getElementById('injuryCount').textContent = events.filter(e => e.event_type === 'Injury').length;
+            document.getElementById('malfunctionCount').textContent = events.filter(e => e.event_type === 'Malfunction').length;
+            document.getElementById('deathCount').textContent = events.filter(e => e.event_type === 'Death').length;
+        }
+
+        // 渲染事件表格
+        function renderEventTable(events) {
+            document.getElementById('resultCount').textContent = `共 ${events.length} 条记录`;
+            
+            if (events.length === 0) {
+                document.getElementById('eventTable').innerHTML = 
+                    '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">暂无数据</td></tr>';
+                return;
+            }
+            
+            const rows = events.map(event => {
+                const riskClass = event.event_type === 'Death' ? 'risk-high' : 
+                                  (event.event_type === 'Injury' ? 'risk-medium' : 'risk-low');
+                const eventTypeText = event.event_type === 'Injury' ? '伤害' : 
+                                      (event.event_type === 'Malfunction' ? '故障' : '死亡');
+                
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-mono">${event.report_number || '-'}</td>
+                        <td class="px-4 py-3 text-sm">${event.receive_date || '-'}</td>
+                        <td class="px-4 py-3 text-sm">${event.device_brand_name || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${riskClass}">${eventTypeText}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="${event.product_problems || ''}">
+                            ${event.product_problems || '-'}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="/event-detail?id=${event.id}" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-eye"></i> 详情
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('eventTable').innerHTML = rows;
+        }
+
+        // 导出Excel
+        async function exportExcel() {
+            if (allEvents.length === 0) {
+                alert('没有数据可导出');
+                return;
+            }
+
+            try {
+                // 获取当前筛选条件
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+
+                const btn = document.querySelector('button[onclick="exportExcel()"]');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ri-loader-4-line animate-spin mr-2"></i>导出中...';
+
+                const response = await fetch('/api/export-competitor-excel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ competitorId, startDate, endDate })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const fileName = `不良事件报告_${document.getElementById('competitorName').textContent}.xlsx`;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    alert('导出成功！');
+                } else {
+                    const err = await response.json();
+                    alert('导出失败: ' + (err.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('导出失败:', error);
+                alert('导出失败: ' + error.message);
+            } finally {
+                const btn = document.querySelector('button[onclick="exportExcel()"]');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-file-excel-line mr-2"></i>导出Excel';
+            }
+        }
+
+        // ========== AI 报告生成 ==========
+        let currentReportMarkdown = '';
+
+        async function generateAIReport() {
+            if (allEvents.length === 0) {
+                alert('没有数据可生成报告');
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="generateAIReport()"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>生成中...';
+
+            // 显示模态框
+            document.getElementById('reportModal').classList.add('active');
+            document.getElementById('reportLoading').style.display = 'flex';
+            document.getElementById('reportContent').style.display = 'none';
+            document.getElementById('downloadWordBtn').style.display = 'none';
+
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const competitorName = document.getElementById('competitorName').textContent;
+
+                document.getElementById('reportStatus').textContent = '正在连接 AI 服务...';
+
+                const response = await fetch('/api/generate-ai-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ competitorId, startDate, endDate })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || '生成失败');
+                }
+
+                document.getElementById('reportStatus').textContent = 'AI 正在撰写分析报告...';
+
+                const result = await response.json();
+                currentReportMarkdown = result.data.report;
+
+                // 简单的 Markdown → HTML 转换
+                const html = markdownToHtml(currentReportMarkdown);
+
+                document.getElementById('reportLoading').style.display = 'none';
+                document.getElementById('reportContent').style.display = 'block';
+                document.getElementById('reportContent').innerHTML = html;
+                document.getElementById('downloadWordBtn').style.display = 'inline-block';
+
+            } catch (error) {
+                console.error('AI报告生成失败:', error);
+                document.getElementById('reportLoading').innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+                        <p class="text-red-600 text-lg font-medium mb-2">报告生成失败</p>
+                        <p class="text-gray-500">${error.message}</p>
+                        <button onclick="closeReportModal()" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">关闭</button>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // 简易 Markdown 转 HTML
+        function markdownToHtml(md) {
+            let html = md;
+            // 表格处理
+            html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)+)/gm, (match, header, separator, body) => {
+                const thCells = header.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
+                const rows = body.trim().split('\n').map(row => {
+                    const cells = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+                    return `<tr>${cells}</tr>`;
+                }).join('');
+                return `<table><thead><tr>${thCells}</tr></thead><tbody>${rows}</tbody></table>`;
+            });
+            // 标题
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            // 水平线
+            html = html.replace(/^---+$/gm, '<hr>');
+            // 粗体和斜体
+            html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            // 无序列表
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+            // 有序列表
+            html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+            // 段落
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+            // 清理空段落
+            html = html.replace(/<p>\s*<\/p>/g, '');
+            html = html.replace(/<p>\s*(<h[1-3]>)/g, '$1');
+            html = html.replace(/(<\/h[1-3]>)\s*<\/p>/g, '$1');
+            html = html.replace(/<p>\s*(<table>)/g, '$1');
+            html = html.replace(/(<\/table>)\s*<\/p>/g, '$1');
+            html = html.replace(/<p>\s*(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)\s*<\/p>/g, '$1');
+            html = html.replace(/<p>\s*(<hr>)/g, '$1');
+            html = html.replace(/(<hr>)\s*<\/p>/g, '$1');
+            return html;
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('active');
+            // 恢复 loading 状态
+            document.getElementById('reportLoading').style.display = 'flex';
+            document.getElementById('reportLoading').innerHTML = `
+                <div style="width:60px;height:60px;border:4px solid #ede9fe;border-top-color:#7c3aed;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;"></div>
+                <p style="color:#6b7280;font-size:1.1rem;">AI 正在分析数据并生成报告，请稍候...</p>
+                <p style="color:#9ca3af;font-size:0.85rem;margin-top:8px;" id="reportStatus">准备中</p>
+            `;
+            document.getElementById('reportContent').style.display = 'none';
+            document.getElementById('reportContent').innerHTML = '';
+            document.getElementById('downloadWordBtn').style.display = 'none';
+        }
+
+        function downloadReportWord() {
+            if (!currentReportMarkdown) return;
+            const competitorName = document.getElementById('competitorName').textContent;
+            const date = new Date().toISOString().split('T')[0];
+            const html = markdownToHtml(currentReportMarkdown);
+
+            // 构建 Word 兼容的 HTML 文档
+            const wordHtml = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: '微软雅黑', 'SimSun', Arial, sans-serif; font-size: 12pt; line-height: 1.8; color: #333; padding: 40px; }
+        h1 { font-size: 18pt; font-weight: bold; color: #1a1a1a; margin: 24pt 0 12pt; border-bottom: 2px solid #004984; padding-bottom: 8pt; }
+        h2 { font-size: 15pt; font-weight: bold; color: #1a1a1a; margin: 20pt 0 10pt; border-bottom: 1px solid #ddd; padding-bottom: 6pt; }
+        h3 { font-size: 13pt; font-weight: bold; color: #333; margin: 16pt 0 8pt; }
+        p { margin: 6pt 0; line-height: 1.8; }
+        table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
+        th, td { border: 1px solid #bbb; padding: 6pt 10pt; font-size: 11pt; text-align: left; }
+        th { background-color: #f0f4f8; font-weight: bold; color: #1a1a1a; }
+        ul, ol { margin: 6pt 0 6pt 24pt; }
+        li { margin: 4pt 0; line-height: 1.7; }
+        strong { color: #1a1a1a; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 16pt 0; }
+    </style>
+</head>
+<body>${html}</body>
+</html>`;
+
+            const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `不良事件检索分析报告_${competitorName}_${date}.doc`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

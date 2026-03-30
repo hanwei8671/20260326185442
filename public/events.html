@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>不良事件检索 - MDR Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #fff; transition: all 0.3s; transform: translateX(-50%); }
+        .nav-link:hover::after { width: 80%; }
+        .nav-link.active::after { width: 80%; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <a href="/" class="hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                    </a>
+                    <span class="text-lg opacity-80">|</span>
+                    <span class="text-base font-medium">不良事件检索</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/dashboard.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">仪表板</a>
+                    <a href="/events.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium active">事件检索</a>
+                    <a href="/competitors.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">竞品管理</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 搜索筛选区 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">
+                <i class="ri-filter-3-line text-blue-500 mr-2"></i>筛选条件
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <!-- 时间范围选择 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">开始日期</label>
+                    <input type="date" id="startDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">结束日期</label>
+                    <input type="date" id="endDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <!-- 快捷选择 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">快捷选择</label>
+                    <select id="quickRange" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">自定义</option>
+                        <option value="7">最近7天</option>
+                        <option value="30" selected>最近30天</option>
+                        <option value="90">最近90天</option>
+                        <option value="180">最近180天</option>
+                        <option value="365">最近1年</option>
+                        <option value="730">最近2年</option>
+                        <option value="all">全部</option>
+                    </select>
+                </div>
+                <!-- 竞品选择 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">竞品</label>
+                    <select id="competitorFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">全部竞品</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <!-- 事件类型 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">事件类型</label>
+                    <select id="eventTypeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">全部类型</option>
+                        <option value="Injury">伤害事件</option>
+                        <option value="Malfunction">故障事件</option>
+                        <option value="Death">死亡事件</option>
+                    </select>
+                </div>
+                <!-- 分类 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">产品分类</label>
+                    <select id="categoryFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">全部分类</option>
+                    </select>
+                </div>
+                <!-- 关键词搜索 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">关键词搜索</label>
+                    <input type="text" id="keywordFilter" placeholder="搜索产品问题..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="searchEvents()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="ri-search-line mr-2"></i>搜索
+                </button>
+                <button onclick="resetFilters()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <i class="ri-refresh-line mr-2"></i>重置
+                </button>
+                <button onclick="triggerHistoricalFetch()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition ml-auto">
+                    <i class="ri-download-line mr-2"></i>导入历史数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" id="statsSection" style="display: none;">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-gray-500 text-sm">检索结果</p>
+                <p class="text-2xl font-bold text-gray-800" id="resultCount">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-gray-500 text-sm">伤害事件</p>
+                <p class="text-2xl font-bold text-red-600" id="injuryCount">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-gray-500 text-sm">故障事件</p>
+                <p class="text-2xl font-bold text-yellow-600" id="malfunctionCount">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <p class="text-gray-500 text-sm">死亡事件</p>
+                <p class="text-2xl font-bold text-gray-600" id="deathCount">0</p>
+            </div>
+        </div>
+
+        <!-- 事件列表 -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">
+                    <i class="ri-list-check text-blue-500 mr-2"></i>事件列表
+                </h2>
+                <button onclick="exportEvents()" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="ri-download-line mr-1"></i>导出Excel
+                </button>
+            </div>
+            
+            <div id="eventsTable" class="overflow-x-auto">
+                <p class="text-gray-500 text-center py-8">请设置筛选条件后搜索</p>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="flex justify-center items-center mt-4 gap-2" id="pagination">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 50;
+        let allEvents = [];
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 设置默认日期
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+            
+            // 加载竞品和分类
+            await loadFilters();
+            
+            // 绑定快捷选择事件
+            document.getElementById('quickRange').addEventListener('change', handleQuickRangeChange);
+        });
+        
+        // 处理快捷选择
+        function handleQuickRangeChange() {
+            const quickRange = document.getElementById('quickRange').value;
+            if (!quickRange || quickRange === 'all') return;
+            
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() - parseInt(quickRange));
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+        }
+        
+        // 加载筛选器选项
+        async function loadFilters() {
+            try {
+                // 加载竞品
+                const compRes = await fetch('/api/competitors');
+                const compResult = await compRes.json();
+                if (compResult.success) {
+                    const compSelect = document.getElementById('competitorFilter');
+                    compResult.data.forEach(comp => {
+                        const option = document.createElement('option');
+                        option.value = comp.id;
+                        option.textContent = comp.name;
+                        compSelect.appendChild(option);
+                    });
+                }
+                
+                // 加载分类
+                const catRes = await fetch('/api/categories');
+                const catResult = await catRes.json();
+                if (catResult.success) {
+                    const catSelect = document.getElementById('categoryFilter');
+                    catResult.data.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.id;
+                        option.textContent = cat.name;
+                        catSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载筛选选项失败:', error);
+            }
+        }
+        
+        // 搜索事件
+        async function searchEvents() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const competitorId = document.getElementById('competitorFilter').value;
+            const eventType = document.getElementById('eventTypeFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+            const keyword = document.getElementById('keywordFilter').value;
+            
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            if (competitorId) params.append('competitorId', competitorId);
+            if (eventType) params.append('eventType', eventType);
+            if (category) params.append('category', category);
+            if (keyword) params.append('keyword', keyword);
+            params.append('limit', '500');
+            
+            try {
+                document.getElementById('eventsTable').innerHTML = '<p class="text-gray-500 text-center py-8"><i class="ri-loader-4-line animate-spin mr-2"></i>加载中...</p>';
+                
+                const response = await fetch('/api/events?' + params.toString());
+                const result = await response.json();
+                
+                if (result.success) {
+                    allEvents = result.data;
+                    currentPage = 1;
+                    displayEvents();
+                    updateStats();
+                } else {
+                    document.getElementById('eventsTable').innerHTML = '<p class="text-red-500 text-center py-8">加载失败: ' + result.error + '</p>';
+                }
+            } catch (error) {
+                console.error('搜索失败:', error);
+                document.getElementById('eventsTable').innerHTML = '<p class="text-red-500 text-center py-8">搜索失败: ' + error.message + '</p>';
+            }
+        }
+        
+        // 显示事件列表
+        function displayEvents() {
+            if (allEvents.length === 0) {
+                document.getElementById('eventsTable').innerHTML = '<p class="text-gray-500 text-center py-8">未找到匹配的事件</p>';
+                return;
+            }
+            
+            const start = (currentPage - 1) * pageSize;
+            const pageEvents = allEvents.slice(start, start + pageSize);
+            
+            const html = `
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left">日期</th>
+                            <th class="px-4 py-3 text-left">竞品</th>
+                            <th class="px-4 py-3 text-left">事件类型</th>
+                            <th class="px-4 py-3 text-left">产品问题</th>
+                            <th class="px-4 py-3 text-left">患者结果</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${pageEvents.map(e => `
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 whitespace-nowrap">${e.receive_date || '-'}</td>
+                                <td class="px-4 py-3 font-medium">${e.device_brand_name || '-'}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded text-xs ${getEventTypeClass(e.event_type)}">
+                                        ${getEventTypeText(e.event_type)}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 max-w-md truncate">${e.product_problems || '-'}</td>
+                                <td class="px-4 py-3 max-w-xs truncate">${e.patient_problems || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('eventsTable').innerHTML = html;
+            updatePagination();
+        }
+        
+        // 获取事件类型样式
+        function getEventTypeClass(type) {
+            if (type === 'Injury') return 'bg-red-100 text-red-700';
+            if (type === 'Death') return 'bg-gray-200 text-gray-700';
+            return 'bg-yellow-100 text-yellow-700';
+        }
+        
+        // 获取事件类型文本
+        function getEventTypeText(type) {
+            if (type === 'Injury') return '伤害';
+            if (type === 'Death') return '死亡';
+            if (type === 'Malfunction') return '故障';
+            return type || '-';
+        }
+        
+        // 更新统计
+        function updateStats() {
+            document.getElementById('statsSection').style.display = 'grid';
+            document.getElementById('resultCount').textContent = allEvents.length;
+            document.getElementById('injuryCount').textContent = allEvents.filter(e => e.event_type === 'Injury').length;
+            document.getElementById('malfunctionCount').textContent = allEvents.filter(e => e.event_type === 'Malfunction').length;
+            document.getElementById('deathCount').textContent = allEvents.filter(e => e.event_type === 'Death').length;
+        }
+        
+        // 更新分页
+        function updatePagination() {
+            const totalPages = Math.ceil(allEvents.length / pageSize);
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = `
+                <button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 rounded border ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white hover:bg-gray-100'}">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            `;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button onclick="goToPage(${i})" class="px-3 py-1 rounded border ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100'}">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="px-2">...</span>`;
+                }
+            }
+            
+            html += `
+                <button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white hover:bg-gray-100'}">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+            
+            document.getElementById('pagination').innerHTML = html;
+        }
+        
+        // 跳转页面
+        function goToPage(page) {
+            const totalPages = Math.ceil(allEvents.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            displayEvents();
+        }
+        
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('quickRange').value = '30';
+            handleQuickRangeChange();
+            document.getElementById('competitorFilter').value = '';
+            document.getElementById('eventTypeFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('keywordFilter').value = '';
+            
+            document.getElementById('statsSection').style.display = 'none';
+            document.getElementById('eventsTable').innerHTML = '<p class="text-gray-500 text-center py-8">请设置筛选条件后搜索</p>';
+            allEvents = [];
+        }
+        
+        // 导入历史数据
+        async function triggerHistoricalFetch() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!startDate || !endDate) {
+                alert('请先选择要导入的时间段');
+                return;
+            }
+            
+            if (!confirm(`确定要导入 ${startDate} 至 ${endDate} 的历史不良事件数据吗？\n此操作可能需要较长时间。`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/trigger-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ startDate, endDate })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`数据导入完成！共处理 ${result.totalEvents} 条记录`);
+                    searchEvents(); // 刷新列表
+                } else {
+                    alert('导入失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('导入失败: ' + error.message);
+            }
+        }
+        
+        // 导出事件
+        function exportEvents() {
+            if (allEvents.length === 0) {
+                alert('没有可导出的数据');
+                return;
+            }
+            
+            // 简单导出为CSV
+            const headers = ['日期', '竞品', '事件类型', '产品问题', '患者结果'];
+            const rows = allEvents.map(e => [
+                e.receive_date || '',
+                e.device_brand_name || '',
+                e.event_type || '',
+                (e.product_problems || '').replace(/"/g, '""'),
+                (e.patient_problems || '').replace(/"/g, '""')
+            ]);
+            
+            const csv = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `不良事件_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

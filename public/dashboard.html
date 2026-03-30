@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞品医疗器械不良事件监控</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .header-bg { background: #004984; }
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #fff; transition: all 0.3s; transform: translateX(-50%); }
+        .nav-link:hover::after { width: 80%; }
+        .nav-link.active::after { width: 80%; }
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .alert-card { transition: all 0.3s ease; }
+        .alert-card:hover { transform: translateX(4px); }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                    <span class="text-lg opacity-80">|</span>
+                    <span class="text-base font-medium">竞品医疗器械不良事件监控</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-2 text-sm opacity-80">
+                        <span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
+                        运行中
+                    </span>
+                    <button onclick="triggerUpdate()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="ri-refresh-line"></i>
+                        立即更新
+                    </button>
+                    <a href="/events.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">事件检索</a>
+                    <a href="/competitors.html" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">竞品管理</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <!-- 筛选栏 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">数据范围:</span>
+                    <select id="quickRange" onchange="handleTimeRangeChange()" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">快捷选择</option>
+                        <option value="7">最近7天</option>
+                        <option value="30">最近30天</option>
+                        <option value="90">最近90天</option>
+                        <option value="180" selected>最近180天</option>
+                        <option value="365">最近1年</option>
+                        <option value="all">全部</option>
+                    </select>
+                    <span id="dataRangeText" class="text-xs text-gray-500">显示最近180天数据</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计概览 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">总事件数 <span class="text-gray-400" id="totalDays">(180天)</span></p>
+                        <p class="text-3xl font-bold text-gray-800" id="totalEvents">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-clipboard-line text-blue-600 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">伤害事件</p>
+                        <p class="text-3xl font-bold text-red-500" id="injuryCount">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-first-aid-kit-line text-red-500 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">故障事件</p>
+                        <p class="text-3xl font-bold text-amber-500" id="malfunctionCount">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-tools-line text-amber-500 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">监控竞品数</p>
+                        <p class="text-3xl font-bold text-emerald-600" id="competitorCount">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-box-3-line text-emerald-600 text-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 风险预警 -->
+        <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="ri-alarm-warning-line text-red-500"></i>
+                <h3 class="font-bold text-gray-800">风险预警</h3>
+            </div>
+            <div id="alertList" class="space-y-3">
+                <p class="text-gray-500 text-center py-4">加载中...</p>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- 事件类型分布 -->
+            <div class="bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ri-pie-chart-line text-blue-500"></i>
+                    <h3 class="font-bold text-gray-800">事件类型分布</h3>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="eventTypeChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 分类统计 -->
+            <div class="bg-white rounded-lg shadow-sm p-5">
+                <div class="flex items-center gap-2 mb-4">
+                    <i class="ri-bar-chart-box-line text-blue-500"></i>
+                    <h3 class="font-bold text-gray-800">分类统计</h3>
+                </div>
+                <div class="relative h-64">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 竞品事件概览 -->
+        <div class="bg-white rounded-lg shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <i class="ri-list-check text-blue-500"></i>
+                    <h3 class="font-bold text-gray-800">竞品事件概览</h3>
+                </div>
+                <input type="text" id="searchInput" placeholder="搜索竞品..." 
+                       onkeyup="filterCompetitors()" 
+                       class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm w-48">
+            </div>
+            <div id="competitorList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-500 text-center py-8 col-span-full">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventTypeChart = null;
+        let categoryChart = null;
+        let allCompetitors = [];
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardData();
+        });
+
+        // 处理时间范围变化
+        function handleTimeRangeChange() {
+            const range = document.getElementById('quickRange').value;
+            const rangeText = document.getElementById('quickRange').options[document.getElementById('quickRange').selectedIndex].text;
+            document.getElementById('dataRangeText').textContent = `显示${rangeText}数据`;
+            document.getElementById('totalDays').textContent = range === 'all' ? '(全部)' : `(${rangeText.replace('最近', '')})`;
+            loadDashboardData();
+        }
+
+        // 加载仪表板数据
+        async function loadDashboardData() {
+            try {
+                const days = document.getElementById('quickRange').value || '180';
+                
+                const response = await fetch(`/api/dashboard?days=${days}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStats(result.data);
+                    updateAlerts(result.data);
+                    updateCharts(result.data);
+                }
+            } catch (error) {
+                console.error('加载数据失败:', error);
+            }
+        }
+
+        // 更新统计数据
+        function updateStats(data) {
+            // API返回的数据结构: { summary: {...}, byCategory: [...], recentEvents: [...], alerts: [...] }
+            const summary = data.summary || {};
+            document.getElementById('totalEvents').textContent = summary.totalEvents || 0;
+            document.getElementById('injuryCount').textContent = summary.totalInjuries || 0;
+            document.getElementById('malfunctionCount').textContent = summary.totalMalfunctions || 0;
+            document.getElementById('competitorCount').textContent = summary.competitors || 0;
+            
+            // 从 byCategory 中提取所有竞品
+            const competitors = [];
+            if (data.byCategory && Array.isArray(data.byCategory)) {
+                data.byCategory.forEach(category => {
+                    if (category.competitors && Array.isArray(category.competitors)) {
+                        category.competitors.forEach(comp => {
+                            // 添加分类信息
+                            competitors.push({
+                                ...comp,
+                                category: category.name,
+                                totalEvents: comp.total,
+                                injuries: comp.injuries,
+                                deaths: comp.deaths
+                            });
+                        });
+                    }
+                });
+            }
+            
+            allCompetitors = competitors;
+            renderCompetitorList(competitors);
+        }
+
+        // 更新风险预警
+        function updateAlerts(data) {
+            const alertList = document.getElementById('alertList');
+            const alerts = data.alerts || [];
+
+            // 检查死亡事件
+            if (data.summary && data.summary.totalDeaths > 0) {
+                alerts.push({
+                    type: 'death',
+                    level: 'high',
+                    title: `报告 ${data.summary.totalDeaths} 起死亡事件`,
+                    time: new Date().toLocaleString('zh-CN'),
+                    color: 'bg-red-50 border-red-200 text-red-800',
+                    icon: 'ri-skull-line'
+                });
+            }
+
+            // 检查伤害事件占比
+            const summary = data.summary || {};
+            const injuryRatio = summary.totalEvents > 0 ? (summary.totalInjuries / summary.totalEvents) * 100 : 0;
+            if (injuryRatio > 30) {
+                alerts.push({
+                    type: 'injury',
+                    level: 'medium',
+                    title: `伤害事件占比超过30%`,
+                    time: new Date().toLocaleString('zh-CN'),
+                    color: 'bg-amber-50 border-amber-200 text-amber-800',
+                    icon: 'ri-first-aid-kit-line'
+                });
+            }
+
+            // 检查总事件数量
+            if (summary.totalEvents > 20) {
+                alerts.push({
+                    type: 'volume',
+                    level: 'low',
+                    title: `报告 ${summary.totalEvents} 起不良事件，数量异常`,
+                    time: new Date().toLocaleString('zh-CN'),
+                    color: 'bg-blue-50 border-blue-200 text-blue-800',
+                    icon: 'ri-information-line'
+                });
+            }
+
+            if (alerts.length === 0) {
+                alertList.innerHTML = '<p class="text-gray-400 text-center py-4">暂无风险预警</p>';
+                return;
+            }
+
+            alertList.innerHTML = alerts.map(alert => `
+                <div class="alert-card ${alert.color} border rounded-lg p-3 flex items-center gap-3 cursor-pointer">
+                    <i class="${alert.icon} text-lg"></i>
+                    <div class="flex-1">
+                        <p class="font-medium text-sm">${alert.title}</p>
+                        <p class="text-xs opacity-70">${alert.time || ''}</p>
+                    </div>
+                    <i class="ri-arrow-right-s-line opacity-50"></i>
+                </div>
+            `).join('');
+        }
+
+        // 更新图表
+        function updateCharts(data) {
+            const summary = data.summary || {};
+            
+            // 事件类型分布饼图
+            const eventTypeCtx = document.getElementById('eventTypeChart').getContext('2d');
+            
+            if (eventTypeChart) {
+                eventTypeChart.destroy();
+            }
+
+            eventTypeChart = new Chart(eventTypeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['伤害事件', '故障事件', '死亡事件', '其他'],
+                    datasets: [{
+                        data: [
+                            summary.totalInjuries || 0,
+                            summary.totalMalfunctions || 0,
+                            summary.totalDeaths || 0,
+                            Math.max(0, (summary.totalEvents || 0) - (summary.totalInjuries || 0) - (summary.totalMalfunctions || 0) - (summary.totalDeaths || 0))
+                        ],
+                        backgroundColor: [
+                            '#ef4444',
+                            '#f59e0b',
+                            '#6b7280',
+                            '#3b82f6'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 分类统计柱状图
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+
+            const byCategory = data.byCategory || [];
+            const categoryData = {};
+            
+            byCategory.forEach(cat => {
+                const categoryName = cat.name || '未分类';
+                categoryData[categoryName] = cat.total || 0;
+            });
+
+            categoryChart = new Chart(categoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(categoryData),
+                    datasets: [{
+                        label: '事件数',
+                        data: Object.values(categoryData),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 触发数据更新
+        async function triggerUpdate() {
+            if (!confirm('确定要立即更新数据吗？')) return;
+            
+            try {
+                const btn = document.querySelector('button[onclick="triggerUpdate()"]');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> 更新中...';
+                
+                const response = await fetch('/api/trigger-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ days: 7 })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('数据更新完成！');
+                    loadDashboardData();
+                } else {
+                    alert('更新失败: ' + result.message);
+                }
+            } catch (error) {
+                alert('更新失败: ' + error.message);
+            } finally {
+                const btn = document.querySelector('button[onclick="triggerUpdate()"]');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ri-refresh-line"></i> 立即更新';
+            }
+        }
+
+        // 渲染竞品列表
+        function renderCompetitorList(competitors) {
+            if (!competitors || competitors.length === 0) {
+                document.getElementById('competitorList').innerHTML = 
+                    '<p class="text-gray-400 text-center py-8 col-span-full">暂无竞品数据</p>';
+                return;
+            }
+
+            const categoryNames = {
+                'biliary_scope': '胆道镜',
+                'bronchoscope': '气管镜',
+                'urology_scope': '泌尿镜',
+                'image_processor': '图像处理器'
+            };
+
+            const days = document.getElementById('quickRange').value || '180';
+            
+            const html = competitors.map(comp => {
+                const riskLevel = comp.deaths > 0 ? 'high' : (comp.injuries > 5 ? 'medium' : 'low');
+                const riskColor = riskLevel === 'high' ? 'bg-red-50 border-red-300' : 
+                                  (riskLevel === 'medium' ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200');
+                const riskBadge = riskLevel === 'high' ? 
+                    '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">高风险</span>' :
+                    (riskLevel === 'medium' ? 
+                        '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">中风险</span>' :
+                        '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">低风险</span>');
+
+                return `
+                    <div class="${riskColor} border rounded-lg p-4 hover:shadow-md transition cursor-pointer" 
+                         onclick="window.location.href='/event-list.html?competitorId=${comp.id}&range=${days}'">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-bold text-gray-800">${comp.name}</h4>
+                                <p class="text-xs text-gray-600">${comp.manufacturer || '未知制造商'}</p>
+                            </div>
+                            ${riskBadge}
+                        </div>
+                        <div class="text-xs text-gray-500 mb-2">${categoryNames[comp.category] || comp.category || '未分类'}</div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-gray-100">
+                            <div>
+                                <div class="text-lg font-bold text-gray-800">${comp.totalEvents || 0}</div>
+                                <div class="text-xs text-gray-500">总数</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-red-600">${comp.injuries || 0}</div>
+                                <div class="text-xs text-gray-500">伤害</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-gray-700">${comp.deaths || 0}</div>
+                                <div class="text-xs text-gray-500">死亡</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('competitorList').innerHTML = html;
+        }
+
+        // 搜索过滤
+        function filterCompetitors() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allCompetitors.filter(c => 
+                c.name.toLowerCase().includes(keyword) || 
+                (c.manufacturer && c.manufacturer.toLowerCase().includes(keyword))
+            );
+            renderCompetitorList(filtered);
+        }
+    </script>
+</body>
+</html>

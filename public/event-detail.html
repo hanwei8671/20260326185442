@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>不良事件详情 - MDR Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .header-bg { background: #004984; }
+        .risk-high { background-color: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .risk-medium { background-color: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .risk-low { background-color: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
+        .bilingual-block { border-left: 3px solid #004984; }
+        .bilingual-en { color: #374151; }
+        .bilingual-cn { color: #004984; background: #f0f7ff; padding: 8px 12px; border-radius: 6px; margin-top: 6px; }
+        .bilingual-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; }
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 2px; background: #fff; transition: all 0.3s; transform: translateX(-50%); }
+        .nav-link:hover::after { width: 80%; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <a href="/" class="flex items-center space-x-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                    </a>
+                    <span class="text-lg font-medium opacity-80">|</span>
+                    <span class="text-base font-medium opacity-90">不良事件详情</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">首页</a>
+                    <a href="/events" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">事件检索</a>
+                    <a href="/competitors" class="nav-link text-white hover:text-gray-200 px-3 py-2 text-sm font-medium">竞品管理</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- 返回按钮 -->
+        <div class="mb-4">
+            <button onclick="goBack()" class="text-blue-600 hover:text-blue-800">
+                <i class="fas fa-arrow-left mr-2"></i>返回列表
+            </button>
+        </div>
+
+        <!-- 基本信息 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">不良事件详情</h1>
+                    <p class="text-gray-500 mt-1" id="reportNumber">报告号 -</p>
+                </div>
+                <span id="eventTypeBadge" class="px-4 py-2 rounded-lg text-sm font-medium">-</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 左列 -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+                        <i class="fas fa-device text-blue-500 mr-2"></i>产品信息
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">产品名称:</div>
+                            <div class="flex-1 font-medium" id="deviceBrandName">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">通用名称:</div>
+                            <div class="flex-1" id="deviceGenericName">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">制造商:</div>
+                            <div class="flex-1" id="deviceManufacturer">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">型号:</div>
+                            <div class="flex-1" id="deviceModelNumber">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">目录号:</div>
+                            <div class="flex-1" id="deviceCatalogNumber">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">序列号:</div>
+                            <div class="flex-1" id="deviceSerialNumber">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">产品编码:</div>
+                            <div class="flex-1" id="productCode">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">器械分类:</div>
+                            <div class="flex-1" id="deviceClass">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右列 -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+                        <i class="fas fa-calendar text-blue-500 mr-2"></i>事件信息
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">接收日期:</div>
+                            <div class="flex-1" id="receiveDate">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">事件日期:</div>
+                            <div class="flex-1" id="eventDate">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">器械状态:</div>
+                            <div class="flex-1" id="deviceAvailability">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">操作者:</div>
+                            <div class="flex-1" id="deviceOperator">-</div>
+                        </div>
+                        <div class="flex">
+                            <div class="w-32 text-gray-500">产品问题:</div>
+                            <div class="flex-1 bilingual-block pl-3" id="productProblems">
+                                <div class="bilingual-en" id="productProblemsEn">-</div>
+                                <div class="bilingual-cn hidden" id="productProblemsCn"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 患者信息 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6" id="patientSection">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+                <i class="fas fa-user text-blue-500 mr-2"></i>患者信息
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex">
+                    <div class="w-24 text-gray-500">年龄:</div>
+                    <div class="flex-1" id="patientAge">-</div>
+                </div>
+                <div class="flex">
+                    <div class="w-24 text-gray-500">性别:</div>
+                    <div class="flex-1" id="patientSex">-</div>
+                </div>
+                <div class="flex">
+                    <div class="w-24 text-gray-500">体重:</div>
+                    <div class="flex-1" id="patientWeight">-</div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-gray-500 mb-1">患者问题</div>
+                <div class="bilingual-block pl-3" id="patientProblems">
+                    <div class="bilingual-en bg-gray-50 p-3 rounded-lg" id="patientProblemsEn">-</div>
+                    <div class="bilingual-cn hidden" id="patientProblemsCn"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 事件描述 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+                <i class="fas fa-align-left text-blue-500 mr-2"></i>事件描述
+            </h3>
+            <div class="bilingual-block pl-3">
+                <div class="bilingual-en bg-gray-50 p-4 rounded-lg whitespace-pre-wrap text-gray-700" id="eventDescriptionEn">
+                    加载中...
+                </div>
+                <div class="bilingual-cn hidden whitespace-pre-wrap" id="eventDescriptionCn"></div>
+            </div>
+        </div>
+
+        <!-- 原始数据 - 默认隐藏，用户可展开查看 -->
+        <div class="bg-white rounded-xl shadow-sm p-6" id="rawDataSection">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-gray-800">
+                    <i class="fas fa-code text-blue-500 mr-2"></i>原始数据
+                </h3>
+                <button onclick="toggleRawData()" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-eye mr-1"></i>展开/收起
+                </button>
+            </div>
+            <pre class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs text-gray-600 hidden" id="rawData">
+                加载中...
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        // 切换原始数据显示
+        function toggleRawData() {
+            const rawData = document.getElementById('rawData');
+            rawData.classList.toggle('hidden');
+        }
+    </script>
+
+    <script>
+        // 获取URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('id');
+        let eventData = null;
+        let competitorId = null;
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!eventId) {
+                alert('缺少事件ID参数');
+                window.location.href = '/';
+                return;
+            }
+            
+            await loadEventDetail();
+        });
+
+        // 加载事件详情
+        async function loadEventDetail() {
+            try {
+                // 通过ID获取事件
+                const response = await fetch(`/api/events?limit=1000`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    eventData = result.data.find(e => e.id == eventId);
+                    
+                    if (!eventData) {
+                        alert('未找到该事件');
+                        window.location.href = '/';
+                        return;
+                    }
+                    
+                    competitorId = eventData.competitor_id;
+                    renderEventDetail(eventData);
+                }
+            } catch (error) {
+                console.error('加载事件详情失败:', error);
+                alert('加载失败: ' + error.message);
+            }
+        }
+
+        // 渲染事件详情
+        function renderEventDetail(event) {
+            // 报告号
+            document.getElementById('reportNumber').textContent = `报告号 ${event.report_number || '-'}`;
+            
+            // 事件类型徽章
+            const eventTypeBadge = document.getElementById('eventTypeBadge');
+            const eventType = event.event_type || '';
+            if (eventType === 'Death') {
+                eventTypeBadge.className = 'px-4 py-2 rounded-lg text-sm font-medium risk-high';
+                eventTypeBadge.textContent = '死亡事件';
+            } else if (eventType === 'Injury') {
+                eventTypeBadge.className = 'px-4 py-2 rounded-lg text-sm font-medium risk-medium';
+                eventTypeBadge.textContent = '伤害事件';
+            } else if (eventType === 'Malfunction') {
+                eventTypeBadge.className = 'px-4 py-2 rounded-lg text-sm font-medium risk-low';
+                eventTypeBadge.textContent = '故障事件';
+            } else {
+                eventTypeBadge.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600';
+                eventTypeBadge.textContent = eventType || '未知';
+            }
+
+            // 产品信息
+            document.getElementById('deviceBrandName').textContent = event.device_brand_name || '-';
+            document.getElementById('deviceGenericName').textContent = event.device_generic_name || '-';
+            document.getElementById('deviceManufacturer').textContent = event.device_manufacturer || '-';
+            document.getElementById('deviceModelNumber').textContent = event.device_model_number || '-';
+            document.getElementById('deviceCatalogNumber').textContent = event.device_catalog_number || '-';
+            document.getElementById('deviceSerialNumber').textContent = event.device_serial_number || '-';
+            document.getElementById('productCode').textContent = event.product_code || '-';
+            document.getElementById('deviceClass').textContent = event.device_class || '-';
+
+            // 事件信息
+            document.getElementById('receiveDate').textContent = event.receive_date || '-';
+            document.getElementById('eventDate').textContent = event.event_date || '-';
+            document.getElementById('deviceAvailability').textContent = event.device_availability || '-';
+            document.getElementById('deviceOperator').textContent = event.device_operator || '-';
+            // 产品问题 - 中英对照
+            const ppEn = event.product_problems || '-';
+            const ppCn = event.product_problems_cn || '';
+            document.getElementById('productProblemsEn').textContent = ppEn;
+            const ppCnEl = document.getElementById('productProblemsCn');
+            if (ppCn) { ppCnEl.textContent = ppCn; ppCnEl.classList.remove('hidden'); }
+            else { ppCnEl.classList.add('hidden'); }
+
+            // 患者信息
+            document.getElementById('patientAge').textContent = event.patient_age || '-';
+            document.getElementById('patientSex').textContent = formatSex(event.patient_sex);
+            document.getElementById('patientWeight').textContent = event.patient_weight || '-';
+            // 患者问题 - 中英对照
+            const patEn = event.patient_problems || '-';
+            const patCn = event.patient_problems_cn || '';
+            document.getElementById('patientProblemsEn').textContent = patEn;
+            const patCnEl = document.getElementById('patientProblemsCn');
+            if (patCn) { patCnEl.textContent = patCn; patCnEl.classList.remove('hidden'); }
+            else { patCnEl.classList.add('hidden'); }
+
+            // 事件描述 - 中英对照
+            const descEn = event.event_description || '无描述';
+            const descCn = event.event_description_cn || '';
+            document.getElementById('eventDescriptionEn').textContent = descEn;
+            const descCnEl = document.getElementById('eventDescriptionCn');
+            if (descCn) { descCnEl.textContent = descCn; descCnEl.classList.remove('hidden'); }
+            else { descCnEl.classList.add('hidden'); }
+
+            // 原始数据
+            try {
+                if (event.raw_data) {
+                    const raw = JSON.parse(event.raw_data);
+                    document.getElementById('rawData').textContent = JSON.stringify(raw, null, 2);
+                } else {
+                    document.getElementById('rawData').textContent = '无原始数据';
+                }
+            } catch (e) {
+                document.getElementById('rawData').textContent = event.raw_data || '无原始数据';
+            }
+        }
+
+        // 格式化性别
+        function formatSex(sex) {
+            if (!sex) return '-';
+            const sexMap = {
+                'M': '男',
+                'Male': '男',
+                'F': '女',
+                'Female': '女',
+                'U': '未知',
+                'Unknown': '未知'
+            };
+            return sexMap[sex] || sex;
+        }
+
+        // 返回列表
+        function goBack() {
+            if (competitorId) {
+                window.location.href = `/event-list?competitorId=${competitorId}`;
+            } else {
+                window.location.href = '/events';
+            }
+        }
+    </script>
+</body>
+</html>

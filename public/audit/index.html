@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内审管理系统 - 医疗器械合规管理平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">内审管理系统</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="showCreatePlanModal()" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+                        <i class="ri-add-line mr-1"></i>新建内审计划
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">本年内审计划</p>
+                        <p class="text-2xl font-bold text-gray-800 mt-1" id="stat-plans-total">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-calendar-check-line text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">进行中</p>
+                        <p class="text-2xl font-bold text-amber-600 mt-1" id="stat-plans-progress">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-time-line text-amber-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">不符合项</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1" id="stat-nc-open">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-error-warning-line text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">内审员</p>
+                        <p class="text-2xl font-bold text-emerald-600 mt-1" id="stat-auditors-active">-</p>
+                    </div>
+                    <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-user-star-line text-emerald-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button onclick="switchTab('plans')" id="tab-plans" class="tab-btn active px-6 py-3 text-sm font-medium border-b-2 border-emerald-500 text-emerald-600">
+                        <i class="ri-calendar-line mr-1"></i>内审计划
+                    </button>
+                    <button onclick="switchTab('auditors')" id="tab-auditors" class="tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        <i class="ri-user-star-line mr-1"></i>内审员管理
+                    </button>
+                    <button onclick="switchTab('nc')" id="tab-nc" class="tab-btn px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                        <i class="ri-error-warning-line mr-1"></i>不符合项
+                    </button>
+                </nav>
+            </div>
+
+            <!-- 内审计划列表 -->
+            <div id="content-plans" class="tab-content p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">全部状态</option>
+                            <option value="planning">计划中</option>
+                            <option value="scheduled">已安排</option>
+                            <option value="in_progress">进行中</option>
+                            <option value="completed">已完成</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                        <input type="text" id="filter-keyword" placeholder="搜索计划编号/名称" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48">
+                        <button onclick="loadPlans()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm">
+                            <i class="ri-search-line"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">计划编号</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">计划名称</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">审核类型</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">计划日期</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">组长</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">状态</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plans-table-body">
+                            <tr><td colspan="7" class="text-center py-8 text-gray-500">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 内审员管理 -->
+            <div id="content-auditors" class="tab-content p-4 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="filter-auditor" placeholder="搜索姓名/工号" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48">
+                        <button onclick="loadAuditors()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm">
+                            <i class="ri-search-line"></i>
+                        </button>
+                    </div>
+                    <button onclick="showCreateAuditorModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm">
+                        <i class="ri-add-line mr-1"></i>添加内审员
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">姓名</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">工号</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">部门</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">资质等级</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">证书有效期</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">审核次数</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">状态</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditors-table-body">
+                            <tr><td colspan="8" class="text-center py-8 text-gray-500">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 不符合项列表 -->
+            <div id="content-nc" class="tab-content p-4 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <select id="filter-nc-status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">全部状态</option>
+                            <option value="open">待整改</option>
+                            <option value="in_progress">整改中</option>
+                            <option value="verified">已验证</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                        <button onclick="loadNCs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm">
+                            <i class="ri-search-line"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">编号</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">问题描述</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">严重程度</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">责任人</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">截止日期</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">状态</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nc-table-body">
+                            <tr><td colspan="7" class="text-center py-8 text-gray-500">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 创建内审计划模态框 -->
+    <div id="modal-create-plan" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">新建内审计划</h3>
+                <button onclick="closeModal('modal-create-plan')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-create-plan" class="p-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">计划编号</label>
+                        <input type="text" name="plan_number" id="input-plan-number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">审核类型</label>
+                        <select name="audit_type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                            <option value="体系审核">体系审核</option>
+                            <option value="过程审核">过程审核</option>
+                            <option value="产品审核">产品审核</option>
+                            <option value="专项审核">专项审核</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">计划名称</label>
+                    <input type="text" name="plan_name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required placeholder="如：2026年度内审计划">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">审核范围</label>
+                    <textarea name="audit_scope" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="审核涉及的部门、过程等"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">计划开始日期</label>
+                        <input type="date" name="planned_start_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">计划结束日期</label>
+                        <input type="date" name="planned_end_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">内审组长</label>
+                    <select name="lead_auditor_id" id="select-lead-auditor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="">请选择</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">审核目的</label>
+                    <textarea name="purpose" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="本次审核的目的"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-create-plan')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">创建计划</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加内审员模态框 -->
+    <div id="modal-create-auditor" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">添加内审员</h3>
+                <button onclick="closeModal('modal-create-auditor')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-create-auditor" class="p-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
+                        <input type="text" name="name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">工号</label>
+                        <input type="text" name="employee_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">部门</label>
+                        <input type="text" name="department" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">岗位</label>
+                        <input type="text" name="position" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">资质等级</label>
+                        <select name="qualification_level" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="实习">实习</option>
+                            <option value="正式">正式</option>
+                            <option value="组长">组长</option>
+                            <option value="高级">高级</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">证书编号</label>
+                        <input type="text" name="certificate_number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">证书颁发日期</label>
+                        <input type="date" name="certificate_issue_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">证书有效期至</label>
+                        <input type="date" name="certificate_expiry_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">专业领域</label>
+                    <input type="text" name="specialty_areas" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：设计开发,生产制造,质量检验">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                    <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-create-auditor')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Tab 切换
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-emerald-500', 'text-emerald-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            
+            document.getElementById(`tab-${tab}`).classList.add('active', 'border-emerald-500', 'text-emerald-600');
+            document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            
+            if (tab === 'plans') loadPlans();
+            if (tab === 'auditors') loadAuditors();
+            if (tab === 'nc') loadNCs();
+        }
+
+        // 模态框操作
+        function showCreatePlanModal() {
+            document.getElementById('modal-create-plan').style.display = 'flex';
+            generatePlanNumber();
+            loadAuditorsForSelect();
+        }
+        
+        function showCreateAuditorModal() {
+            document.getElementById('modal-create-auditor').style.display = 'flex';
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // 状态映射
+        const statusMap = {
+            'planning': { text: '计划中', class: 'bg-gray-100 text-gray-700' },
+            'scheduled': { text: '已安排', class: 'bg-blue-100 text-blue-700' },
+            'in_progress': { text: '进行中', class: 'bg-amber-100 text-amber-700' },
+            'completed': { text: '已完成', class: 'bg-green-100 text-green-700' },
+            'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-500' }
+        };
+        
+        const ncStatusMap = {
+            'open': { text: '待整改', class: 'bg-red-100 text-red-700' },
+            'in_progress': { text: '整改中', class: 'bg-amber-100 text-amber-700' },
+            'corrected': { text: '已整改', class: 'bg-blue-100 text-blue-700' },
+            'verified': { text: '已验证', class: 'bg-green-100 text-green-700' },
+            'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-500' }
+        };
+        
+        const ncCategoryMap = {
+            '严重': { class: 'bg-red-100 text-red-700' },
+            '一般': { class: 'bg-amber-100 text-amber-700' },
+            '观察项': { class: 'bg-blue-100 text-blue-700' }
+        };
+
+        // 加载统计数据
+        async function loadDashboard() {
+            const res = await fetch('/audit/api/dashboard');
+            const { data } = await res.json();
+            
+            document.getElementById('stat-plans-total').textContent = data.plans?.total || 0;
+            document.getElementById('stat-plans-progress').textContent = data.plans?.in_progress || 0;
+            document.getElementById('stat-nc-open').textContent = data.nc?.open || 0;
+            document.getElementById('stat-auditors-active').textContent = data.auditors?.active || 0;
+        }
+
+        // 加载内审计划
+        async function loadPlans() {
+            const status = document.getElementById('filter-status').value;
+            const keyword = document.getElementById('filter-keyword').value;
+            
+            const params = new URLSearchParams();
+            if (status) params.append('status', status);
+            if (keyword) params.append('keyword', keyword);
+            
+            const res = await fetch(`/audit/api/audit-plans?${params}`);
+            const { data } = await res.json();
+            
+            const tbody = document.getElementById('plans-table-body');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(p => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-blue-600">${p.plan_number}</td>
+                    <td class="px-4 py-3">${p.plan_name}</td>
+                    <td class="px-4 py-3">${p.audit_type}</td>
+                    <td class="px-4 py-3">${p.planned_start_date || '-'} ~ ${p.planned_end_date || '-'}</td>
+                    <td class="px-4 py-3">${p.lead_auditor_name || '-'}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${statusMap[p.status]?.class}">${statusMap[p.status]?.text || p.status}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="viewPlan(${p.id})" class="text-blue-600 hover:text-blue-800 mr-2"><i class="ri-eye-line"></i></button>
+                        <button onclick="deletePlan(${p.id})" class="text-red-600 hover:text-red-800"><i class="ri-delete-bin-line"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 加载内审员
+        async function loadAuditors() {
+            const keyword = document.getElementById('filter-auditor').value;
+            const params = new URLSearchParams();
+            if (keyword) params.append('keyword', keyword);
+            
+            const res = await fetch(`/audit/api/auditors?${params}`);
+            const { data } = await res.json();
+            
+            const tbody = document.getElementById('auditors-table-body');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(a => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium">${a.name}</td>
+                    <td class="px-4 py-3">${a.employee_id || '-'}</td>
+                    <td class="px-4 py-3">${a.department || '-'}</td>
+                    <td class="px-4 py-3">${a.qualification_level || '-'}</td>
+                    <td class="px-4 py-3">${a.certificate_expiry_date || '-'}</td>
+                    <td class="px-4 py-3">${a.total_audits || 0}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
+                            ${a.status === 'active' ? '在岗' : '停用'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="editAuditor(${a.id})" class="text-blue-600 hover:text-blue-800 mr-2"><i class="ri-edit-line"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 加载不符合项
+        async function loadNCs() {
+            const status = document.getElementById('filter-nc-status').value;
+            const params = new URLSearchParams();
+            if (status) params.append('status', status);
+            
+            const res = await fetch(`/audit/api/nonconformities?${params}`);
+            const { data } = await res.json();
+            
+            const tbody = document.getElementById('nc-table-body');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">暂无数据</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(n => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-blue-600">${n.nc_number}</td>
+                    <td class="px-4 py-3 max-w-xs truncate">${n.title}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${ncCategoryMap[n.category]?.class}">${n.category}</span>
+                    </td>
+                    <td class="px-4 py-3">${n.responsible_person || '-'}</td>
+                    <td class="px-4 py-3">${n.due_date || '-'}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${ncStatusMap[n.status]?.class}">${ncStatusMap[n.status]?.text || n.status}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <button onclick="viewNC(${n.id})" class="text-blue-600 hover:text-blue-800"><i class="ri-eye-line"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 生成计划编号
+        async function generatePlanNumber() {
+            const res = await fetch('/audit/api/generate-plan-number');
+            const { number } = await res.json();
+            document.getElementById('input-plan-number').value = number;
+        }
+
+        // 加载内审员下拉选项
+        async function loadAuditorsForSelect() {
+            const res = await fetch('/audit/api/auditors?status=active');
+            const { data } = await res.json();
+            const select = document.getElementById('select-lead-auditor');
+            select.innerHTML = '<option value="">请选择</option>' + 
+                data.filter(a => ['组长', '高级', '正式'].includes(a.qualification_level))
+                    .map(a => `<option value="${a.id}">${a.name} (${a.qualification_level})</option>`).join('');
+        }
+
+        // 表单提交
+        document.getElementById('form-create-plan').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            const res = await fetch('/audit/api/audit-plans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await res.json();
+            if (result.id) {
+                closeModal('modal-create-plan');
+                loadPlans();
+                loadDashboard();
+                alert('创建成功');
+            } else {
+                alert('创建失败: ' + (result.error || '未知错误'));
+            }
+        });
+
+        document.getElementById('form-create-auditor').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            data.specialty_areas = data.specialty_areas ? data.specialty_areas.split(',').map(s => s.trim()) : [];
+            
+            const res = await fetch('/audit/api/auditors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await res.json();
+            if (result.id) {
+                closeModal('modal-create-auditor');
+                loadAuditors();
+                loadDashboard();
+                e.target.reset();
+                alert('添加成功');
+            } else {
+                alert('添加失败: ' + (result.error || '未知错误'));
+            }
+        });
+
+        // 初始化
+        loadDashboard();
+        loadPlans();
+    </script>
+</body>
+</html>

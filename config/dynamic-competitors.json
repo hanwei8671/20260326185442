@@ -1,0 +1,91 @@
+[
+  {
+    "id": "spyglass",
+    "name": "SpyGlass",
+    "manufacturer": "Boston Scientific",
+    "keywords": [
+      "spyglass"
+    ],
+    "deviceClass": "Class II",
+    "productCode": "KMQ",
+    "category": "胆道镜",
+    "categoryId": "biliary_scope",
+    "categoryDesc": "胆道镜相关设备",
+    "isSystem": true,
+    "originalSource": "system",
+    "updatedAt": "2026-03-25T06:30:28.966Z"
+  },
+  {
+    "id": "AMBU气管镜",
+    "name": "Ambu® aScope™ 4",
+    "manufacturer": "Ambu",
+    "category": "气管镜",
+    "categoryId": "bronchoscope",
+    "categoryDesc": "气管镜、支气管镜等呼吸内镜设备",
+    "deviceClass": "Class II",
+    "productCode": "KMQ",
+    "keywords": [
+      "ascope 4",
+      "ambu bronchoscope",
+      "disposable bronchoscope"
+    ],
+    "isSystem": true,
+    "createdAt": "2026-03-25T06:46:41.984Z",
+    "updatedAt": "2026-03-27T00:00:00.000Z"
+  },
+  {
+    "id": "cholangioscope",
+    "name": "胆道镜系统",
+    "manufacturer": "Olympus",
+    "keywords": [
+      "cholangioscope",
+      "olympus cholangio",
+      "biliary scope"
+    ],
+    "deviceClass": "Class II",
+    "productCode": "KMQ",
+    "category": "内窥镜类",
+    "categoryId": "endoscopes",
+    "categoryDesc": "胆道镜、十二指肠镜等内窥镜设备",
+    "isSystem": true,
+    "originalSource": "system",
+    "isDisabled": true,
+    "disabledAt": "2026-03-27T07:34:55.206Z"
+  },
+  {
+    "id": "drug_eluting_stent",
+    "name": "药物洗脱支架",
+    "manufacturer": "Abbott",
+    "keywords": [
+      "xience",
+      "drug eluting stent",
+      "coronary stent"
+    ],
+    "deviceClass": "Class III",
+    "productCode": "MAF",
+    "category": "心血管类",
+    "categoryId": "cardiovascular",
+    "categoryDesc": "心脏支架、球囊等心血管介入器械",
+    "isSystem": true,
+    "originalSource": "system",
+    "isDisabled": true,
+    "disabledAt": "2026-03-27T07:35:07.006Z"
+  },
+  {
+    "id": "duodenoscope",
+    "name": "十二指肠镜",
+    "manufacturer": "Fujifilm",
+    "keywords": [
+      "duodenoscope",
+      "fujifilm duodeno"
+    ],
+    "deviceClass": "Class II",
+    "productCode": "FGE",
+    "category": "biliary_scope",
+    "categoryId": "biliary_scope",
+    "categoryDesc": "胆道镜相关设备",
+    "isSystem": true,
+    "originalSource": "system",
+    "updatedAt": "2026-03-30T14:57:54.637Z"
+  }
+]
