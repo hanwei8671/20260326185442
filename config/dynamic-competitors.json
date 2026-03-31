@@ -87,5 +87,24 @@
     "isSystem": true,
     "originalSource": "system",
     "updatedAt": "2026-03-30T14:57:54.637Z"
+  },
+  {
+    "id": "ambu_ascope",
+    "name": "Ambu® aScope™ 4",
+    "manufacturer": "Ambu",
+    "keywords": [
+      "ascope 4",
+      "ambu bronchoscope",
+      "disposable bronchoscope"
+    ],
+    "deviceClass": "Class II",
+    "productCode": "KMQ",
+    "category": "气管镜",
+    "categoryId": "bronchoscope",
+    "categoryDesc": "气管镜、支气管镜等呼吸内镜设备",
+    "isSystem": true,
+    "originalSource": "system",
+    "isDisabled": true,
+    "disabledAt": "2026-03-31T07:22:13.037Z"
   }
 ]
