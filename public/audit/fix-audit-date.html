@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>修复审核日期</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">修复审核条目日期</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">当前审核条目数据</h2>
+            <div id="auditList" class="space-y-2">加载中...</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">修复操作</h2>
+            <p class="text-gray-600 mb-4">如果审核日期显示为空，请点击下方按钮修复所有审核条目的日期。</p>
+            <button onclick="fixAllDates()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                修复所有审核日期
+            </button>
+            <div id="fixResult" class="mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // 加载审核条目数据
+        async function loadAuditData() {
+            try {
+                const res = await fetch('/audit/api/external-audits');
+                const result = await res.json();
+                
+                const listDiv = document.getElementById('auditList');
+                listDiv.innerHTML = result.data.map(item => `
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <div>
+                            <span class="font-medium">${item.project_number}</span>
+                            <span class="text-gray-500 ml-2">${item.audit_type}</span>
+                        </div>
+                        <div>
+                            <span class="${item.audit_date ? 'text-green-600' : 'text-red-600'} font-medium">
+                                审核日期: ${item.audit_date || '未设置'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                document.getElementById('auditList').innerHTML = '<p class="text-red-600">加载失败</p>';
+            }
+        }
+        
+        // 修复所有审核日期
+        async function fixAllDates() {
+            const resultDiv = document.getElementById('fixResult');
+            resultDiv.innerHTML = '<p class="text-blue-600">正在修复...</p>';
+            
+            try {
+                const res = await fetch('/audit/api/external-audits');
+                const result = await res.json();
+                
+                let fixed = 0;
+                for (const item of result.data) {
+                    if (!item.audit_date) {
+                        // 设置默认日期为今天
+                        const today = new Date().toISOString().split('T')[0];
+                        
+                        const updateRes = await fetch(`/audit/api/external-audits/${item.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ...item,
+                                audit_date: today
+                            })
+                        });
+                        
+                        if (updateRes.ok) fixed++;
+                    }
+                }
+                
+                resultDiv.innerHTML = `<p class="text-green-600">✓ 修复完成！已修复 ${fixed} 条记录</p>`;
+                loadAuditData();
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="text-red-600">修复失败: ${err.message}</p>`;
+            }
+        }
+        
+        loadAuditData();
+    </script>
+</body>
+</html>

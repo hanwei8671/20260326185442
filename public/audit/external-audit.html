@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外审CAPA管理 - 审核管理系统</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .tab-active {
+            border-bottom: 2px solid #004984;
+            color: #004984;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/audit/index.html" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">外审CAPA管理</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/audit/index.html" class="bg-white/20 text-white px-4 py-2 rounded-lg text-sm hover:bg-white/30 transition">
+                        <i class="ri-arrow-left-line mr-1"></i>返回审核管理
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">外审条目总数</p>
+                        <p class="text-2xl font-bold text-gray-800 mt-1" id="stat-total">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-file-list-3-line text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">MT品牌</p>
+                        <p class="text-2xl font-bold text-blue-600 mt-1" id="stat-mt">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-building-line text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">TR品牌</p>
+                        <p class="text-2xl font-bold text-green-600 mt-1" id="stat-tr">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-building-line text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">CAPA总数</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1" id="stat-capa">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-error-warning-line text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab导航 -->
+        <div class="bg-white rounded-t-xl shadow-sm border-b border-gray-200">
+            <div class="flex">
+                <button onclick="switchTab('audit')" id="tab-audit" class="tab-active px-6 py-4 text-sm font-medium text-gray-600 hover:text-gray-800 transition">
+                    <i class="ri-file-list-3-line mr-1"></i>外审条目
+                </button>
+                <button onclick="switchTab('capa')" id="tab-capa" class="px-6 py-4 text-sm font-medium text-gray-600 hover:text-gray-800 transition">
+                    <i class="ri-error-warning-line mr-1"></i>CAPA列表
+                    <span id="tab-capa-count" class="ml-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 外审条目列表 -->
+        <div id="content-audit" class="bg-white rounded-b-xl shadow-sm border border-t-0 border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
+                <input type="text" id="auditSearchKeyword" placeholder="搜索审核类型、项目..." 
+                       class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
+                       onkeyup="if(event.keyCode===13) loadAuditData()">
+                <button onclick="showAddModal()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                    <i class="ri-add-line mr-1"></i>添加外审条目
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">流水编号</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">审核类型</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">审核项目</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">项目编号</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">产品品牌</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">责任部门</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">审核日期</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">CAPA数量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                                <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                暂无数据
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CAPA列表 -->
+        <div id="content-capa" class="hidden bg-white rounded-b-xl shadow-sm border border-t-0 border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <input type="text" id="capaSearchKeyword" placeholder="搜索CAPA编号、描述..." 
+                           class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40"
+                           onkeyup="if(event.keyCode===13) loadCapaData()">
+                    <select id="filterCapaStatus" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadCapaData()">
+                        <option value="">全部状态</option>
+                        <option value="open">待处理</option>
+                        <option value="in_progress">处理中</option>
+                        <option value="corrected">已纠正</option>
+                        <option value="verified">已验证</option>
+                        <option value="closed">已关闭</option>
+                    </select>
+                    <select id="filterCapaCategory" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadCapaData()">
+                        <option value="">全部程度</option>
+                        <option value="严重">严重</option>
+                        <option value="一般">一般</option>
+                        <option value="观察项">观察项</option>
+                    </select>
+                    <select id="filterCapaBrand" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadCapaData()">
+                        <option value="">全部品牌</option>
+                        <option value="MT">MT</option>
+                        <option value="TR">TR</option>
+                    </select>
+                    <div class="flex items-center gap-1">
+                        <input type="date" id="filterAuditDateStart" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadCapaData()">
+                        <span class="text-gray-400">至</span>
+                        <input type="date" id="filterAuditDateEnd" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadCapaData()">
+                    </div>
+                    <button onclick="loadCapaData()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">
+                        <i class="ri-search-line mr-1"></i>搜索
+                    </button>
+                    <button onclick="analyzeCAPA()" class="bg-purple-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-purple-700 transition ml-2">
+                        <i class="ri-ai-generate mr-1"></i>AI分析
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">CAPA编号</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">问题描述</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">所属外审</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">品牌</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">审核日期</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">严重程度</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">责任人</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">截止日期</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capaTableBody" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                                <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                暂无数据
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加/编辑外审条目弹窗 -->
+    <div id="modal-add" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800" id="modal-title">添加外审条目</h3>
+                <button onclick="closeModal('modal-add')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-add" class="p-4 space-y-4">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">流水编号 *</label>
+                        <input type="text" name="serial_number" id="serial-number" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">审核类型 *</label>
+                        <input type="text" name="audit_type" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：ISO 13485审核">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">审核项目 *</label>
+                        <input type="text" name="project_name" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="审核项目名称">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">项目编号 *</label>
+                        <input type="text" name="project_number" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：PJT-2026-001">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">产品品牌 *</label>
+                        <select name="product_brand" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">请选择</option>
+                            <option value="MT">MT</option>
+                            <option value="TR">TR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任部门 *</label>
+                        <select name="responsible_department" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">请选择</option>
+                            <option value="设备研发">设备研发</option>
+                            <option value="耗材研发">耗材研发</option>
+                            <option value="产品管理">产品管理</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">审核日期 *</label>
+                        <input type="date" name="audit_date" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">完成整改时间</label>
+                        <input type="date" name="correction_due_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">质量工程师</label>
+                    <input type="text" name="quality_engineer" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="负责质量工程师姓名">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+                    <textarea name="notes" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="其他备注信息"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-add')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI分析结果弹窗 -->
+    <div id="modal-analysis" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+                <h3 class="text-lg font-bold text-gray-800">AI分析报告</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadPPT()" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700">
+                        <i class="ri-download-line mr-1"></i>下载PPT
+                    </button>
+                    <button onclick="closeModal('modal-analysis')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                </div>
+            </div>
+            <div id="analysis-result" class="p-6">
+                <!-- 分析结果将在这里显示 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let auditData = [];
+        let capaData = [];
+
+        // 切换Tab
+        function switchTab(tab) {
+            if (tab === 'audit') {
+                document.getElementById('tab-audit').classList.add('tab-active');
+                document.getElementById('tab-capa').classList.remove('tab-active');
+                document.getElementById('content-audit').classList.remove('hidden');
+                document.getElementById('content-capa').classList.add('hidden');
+                loadAuditData();
+            } else {
+                document.getElementById('tab-audit').classList.remove('tab-active');
+                document.getElementById('tab-capa').classList.add('tab-active');
+                document.getElementById('content-audit').classList.add('hidden');
+                document.getElementById('content-capa').classList.remove('hidden');
+                loadCapaData();
+            }
+        }
+
+        // 加载外审条目数据
+        async function loadAuditData() {
+            const keyword = document.getElementById('auditSearchKeyword').value;
+            const params = new URLSearchParams();
+            if (keyword) params.append('keyword', keyword);
+            
+            try {
+                const res = await fetch(`/audit/api/external-audits?${params}`);
+                const result = await res.json();
+                auditData = result.data || [];
+                renderAuditTable();
+                updateStats();
+            } catch (err) {
+                console.error('加载外审条目失败:', err);
+            }
+        }
+
+        // 加载CAPA数据
+        async function loadCapaData() {
+            const keyword = document.getElementById('capaSearchKeyword').value;
+            const status = document.getElementById('filterCapaStatus').value;
+            const category = document.getElementById('filterCapaCategory').value;
+            const brand = document.getElementById('filterCapaBrand').value;
+            const auditDateStart = document.getElementById('filterAuditDateStart').value;
+            const auditDateEnd = document.getElementById('filterAuditDateEnd').value;
+            
+            const params = new URLSearchParams();
+            if (keyword) params.append('keyword', keyword);
+            if (status) params.append('status', status);
+            if (category) params.append('category', category);
+            if (brand) params.append('brand', brand);
+            if (auditDateStart) params.append('audit_date_start', auditDateStart);
+            if (auditDateEnd) params.append('audit_date_end', auditDateEnd);
+            
+            try {
+                const res = await fetch(`/audit/api/external-capa/all?${params}`);
+                const result = await res.json();
+                capaData = result.data || [];
+                renderCapaTable();
+                updateStats();
+            } catch (err) {
+                console.error('加载CAPA失败:', err);
+            }
+        }
+
+        // 更新统计
+        function updateStats() {
+            document.getElementById('stat-total').textContent = auditData.length;
+            document.getElementById('stat-mt').textContent = auditData.filter(d => d.product_brand === 'MT').length;
+            document.getElementById('stat-tr').textContent = auditData.filter(d => d.product_brand === 'TR').length;
+            const totalCapa = auditData.reduce((sum, d) => sum + (d.nc_count || 0), 0);
+            document.getElementById('stat-capa').textContent = totalCapa;
+            document.getElementById('tab-capa-count').textContent = capaData.length || totalCapa;
+        }
+
+        // 渲染外审条目表格
+        function renderAuditTable() {
+            const tbody = document.getElementById('auditTableBody');
+            
+            if (auditData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                            <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                            暂无数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = auditData.map(item => `
+                <tr class="hover:bg-gray-50 cursor-pointer border-b border-gray-100" onclick="viewAuditDetail(${item.id})">
+                    <td class="px-4 py-3 font-medium text-blue-600">${item.serial_number || '-'}</td>
+                    <td class="px-4 py-3 text-gray-900">${item.audit_type || '-'}</td>
+                    <td class="px-4 py-3 text-gray-900">${item.project_name || '-'}</td>
+                    <td class="px-4 py-3 text-gray-600 font-mono">${item.project_number || '-'}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium ${item.product_brand === 'MT' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${item.product_brand || '-'}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">${item.responsible_department || '-'}</td>
+                    <td class="px-4 py-3 text-gray-600">${item.audit_date || '-'}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">${item.nc_count || 0}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 渲染CAPA表格
+        function renderCapaTable() {
+            const tbody = document.getElementById('capaTableBody');
+            
+            if (capaData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-400">
+                            <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                            暂无数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const statusMap = {
+                'open': { text: '待处理', class: 'bg-red-100 text-red-700' },
+                'in_progress': { text: '处理中', class: 'bg-yellow-100 text-yellow-700' },
+                'corrected': { text: '已纠正', class: 'bg-blue-100 text-blue-700' },
+                'verified': { text: '已验证', class: 'bg-green-100 text-green-700' },
+                'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-700' }
+            };
+            
+            const categoryMap = {
+                '严重': 'bg-red-100 text-red-700',
+                '一般': 'bg-yellow-100 text-yellow-700',
+                '观察项': 'bg-blue-100 text-blue-700'
+            };
+
+            tbody.innerHTML = capaData.map(item => {
+                const statusInfo = statusMap[item.status] || { text: item.status, class: 'bg-gray-100 text-gray-700' };
+                const categoryClass = categoryMap[item.category] || 'bg-gray-100 text-gray-700';
+                const brandClass = item.product_brand === 'MT' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700';
+                
+                return `
+                    <tr class="hover:bg-gray-50 cursor-pointer border-b border-gray-100" onclick="viewCapaDetail(${item.external_audit_id}, ${item.id})">
+                        <td class="px-4 py-3 font-medium text-blue-600">${item.capa_number || '-'}</td>
+                        <td class="px-4 py-3 text-gray-900 max-w-xs truncate" title="${item.description || ''}">${item.description || '-'}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.project_number || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${brandClass}">${item.product_brand || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600" title="eid:${item.external_audit_id}">${item.audit_date || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${categoryClass}">${item.category || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">${item.responsible_person || '-'}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.due_date || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusInfo.class}">${statusInfo.text}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 查看外审详情
+        function viewAuditDetail(id) {
+            window.location.href = `external-audit-detail.html?id=${id}`;
+        }
+
+        // 查看CAPA详情
+        function viewCapaDetail(externalAuditId, capaId) {
+            window.location.href = `external-audit-detail.html?id=${externalAuditId}&capaId=${capaId}`;
+        }
+
+        // 弹窗控制
+        function showAddModal() {
+            document.getElementById('modal-title').textContent = '添加外审条目';
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-add').reset();
+            generateSerialNumber();
+            document.getElementById('modal-add').classList.remove('hidden');
+            document.getElementById('modal-add').classList.add('flex');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('flex');
+        }
+
+        // 生成流水编号
+        async function generateSerialNumber() {
+            try {
+                const res = await fetch('/audit/api/generate-serial-number');
+                const result = await res.json();
+                document.getElementById('serial-number').value = result.number;
+            } catch (err) {
+                console.error('生成编号失败:', err);
+            }
+        }
+
+        // 提交表单
+        document.getElementById('form-add').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit-id').value;
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const url = id ? `/audit/api/external-audits/${id}` : '/audit/api/external-audits';
+                const method = id ? 'PUT' : 'POST';
+                
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                
+                if (result.error) {
+                    alert('保存失败: ' + result.error);
+                } else {
+                    closeModal('modal-add');
+                    loadAuditData();
+                }
+            } catch (err) {
+                alert('保存失败');
+            }
+        });
+
+        // AI分析CAPA
+        async function analyzeCAPA() {
+            if (capaData.length === 0) {
+                alert('请先筛选出需要分析的CAPA数据');
+                return;
+            }
+            
+            // 显示分析中弹窗
+            const modal = document.getElementById('modal-analysis');
+            const resultDiv = document.getElementById('analysis-result');
+            resultDiv.innerHTML = '<div class="text-center py-8"><i class="ri-loader-4-line animate-spin text-4xl text-blue-600"></i><p class="mt-4 text-gray-600">AI正在分析中，请稍候...</p></div>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            try {
+                const res = await fetch('/audit/api/capa-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ capas: capaData })
+                });
+                
+                const result = await res.json();
+                
+                if (result.error) {
+                    resultDiv.innerHTML = `<p class="text-red-600">分析失败: ${result.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = result.html;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<p class="text-red-600">分析失败: ${err.message}</p>`;
+            }
+        }
+        
+        // 下载PPT
+        async function downloadPPT() {
+            if (capaData.length === 0) {
+                alert('没有可分析的数据');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/audit/api/capa-analysis/ppt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ capas: capaData })
+                });
+                
+                if (!res.ok) {
+                    throw new Error('生成PPT失败');
+                }
+                
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `CAPA分析报告_${new Date().toISOString().split('T')[0]}.pptx`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                alert('下载失败: ' + err.message);
+            }
+        }
+
+        // 初始化
+        loadAuditData();
+    </script>
+</body>
+</html>

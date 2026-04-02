@@ -1,6 +1,6 @@
 # 医疗器械合规管理平台
 
-基于 Node.js + Express + SQLite 构建的医疗器械合规管理平台，包含不良事件监控和内审管理系统两大模块。
+基于 Node.js + Express + SQLite 构建的医疗器械合规管理平台，包含不良事件监控、内审管理和外审CAPA管理三大模块。
 
 ## 功能特性
 
@@ -18,6 +18,13 @@
 - **一键导出**: 不符合项数据一键导出为 Excel 文件
 - **可视化仪表板**: 内审概览统计展示
 
+### 外审CAPA管理
+- **外审项目管理**: 外部审核项目的创建和管理
+- **CAPA跟踪**: 纠正与预防措施（CAPA）的录入、编辑、状态跟踪
+- **多维度筛选**: 按审核日期、状态、严重程度、品牌等多条件筛选
+- **AI智能分析**: 基于ISO 13485视角，AI自动分析CAPA数据，识别系统性问题
+- **PPT报告生成**: 一键生成管理评审CAPA分析报告（PPTX格式），含执行摘要、关键指标、问题分析和改进建议
+
 ## 快速开始
 
 ### 1. 安装依赖
@@ -34,6 +41,13 @@ cp .env.example .env
 # 编辑 .env 文件，配置 API 密钥等
 ```
 
+需要配置的AI分析相关环境变量：
+```
+OPENAI_API_KEY=your_api_key
+OPENAI_BASE_URL=your_api_base_url
+OPENAI_MODEL=your_model_name
+```
+
 ### 3. 启动服务
 
 ```bash
@@ -41,6 +55,14 @@ npm start
 ```
 
 访问 http://localhost:3000 查看仪表板
+
+### 4. PM2部署（推荐）
+
+```bash
+pm2 start server.js --name mdr-system
+pm2 save
+pm2 startup
+```
 
 ## 竞品配置
 
@@ -87,31 +109,22 @@ endoscopes: {
 | `/api/nonconformities` | GET/POST | 获取/创建不符合项 |
 | `/api/nonconformities/:id` | PUT/DELETE | 更新/删除不符合项 |
 
-## 定时任务
+### 外审CAPA管理
 
-默认每天凌晨 2:00 自动执行数据抓取，可在 `.env` 中配置：
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/external-audits` | GET/POST | 获取/创建外审项目 |
+| `/api/external-audits/:id` | PUT/DELETE | 更新/删除外审项目 |
+| `/api/external-capa` | GET/POST | 获取/创建CAPA |
+| `/api/external-capa/all` | POST | 多条件筛选CAPA |
+| `/api/external-capa/:id` | PUT/DELETE | 更新/删除CAPA |
+| `/api/capa-analysis` | POST | AI分析CAPA数据 |
+| `/api/capa-analysis/ppt` | POST | 生成CAPA分析PPT |
 
-```
-CRON_SCHEDULE=0 2 * * *
-```
+## 数据库
 
-## 数据结构
-
-### 不良事件记录
-
-- 报告编号、MDR报告编号
-- 事件日期、报告日期
-- 器械信息（品牌、型号、制造商）
-- 产品问题描述
-- 患者信息（年龄、性别、结果）
-- 事件详细描述
-
-### 摘要报告
-
-- 竞品整体风险评估
-- 事件类型分布统计
-- 主要安全问题识别
-- 趋势分析和建议措施
+- `data/mdr_database.db` - 主数据库（不良事件、竞品数据）
+- `data/audit_database.db` - 内审数据库（审核计划、内审员、不符合项）
 
 ## 技术栈
 
@@ -120,6 +133,8 @@ CRON_SCHEDULE=0 2 * * *
 - **前端**: Tailwind CSS + Chart.js
 - **定时任务**: node-cron
 - **日志**: Winston
+- **PPT生成**: pptxgenjs
+- **AI分析**: OpenAI兼容API
 
 ## 许可证
 

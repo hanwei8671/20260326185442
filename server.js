@@ -264,6 +264,22 @@ app.get('/api/events', async (req, res) => {
 });
 
 /**
+ * 获取单个事件详情
+ */
+app.get('/api/events/:id', async (req, res) => {
+  try {
+    const event = await databaseService.getEventById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, error: '事件不存在' });
+    }
+    res.json({ success: true, data: event });
+  } catch (error) {
+    logger.error('Event detail API error:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * 获取统计数据（支持时间段筛选）
  */
 app.get('/api/statistics', async (req, res) => {

@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>内审管理系统 - 医疗器械合规管理平台</title>
+    <title>审核管理系统 - 医疗器械合规管理平台</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         .header-bg { background: #004984; }
     </style>
@@ -19,10 +21,13 @@
                     <a href="/" class="flex items-center gap-3 hover:opacity-90">
                         <img src="/logo.svg" alt="Micro-Tech" class="h-8">
                         <span class="text-lg font-medium opacity-80">|</span>
-                        <h1 class="text-lg font-bold">内审管理系统</h1>
+                        <h1 class="text-lg font-bold">审核管理系统</h1>
                     </a>
                 </div>
                 <div class="flex items-center gap-2">
+                    <a href="external-audit.html" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition border border-blue-200">
+                        <i class="ri-file-list-3-line mr-1"></i>外审CAPA管理
+                    </a>
                     <button onclick="showCreatePlanModal()" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
                         <i class="ri-add-line mr-1"></i>新建内审计划
                     </button>

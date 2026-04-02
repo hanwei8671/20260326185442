@@ -402,6 +402,17 @@ class DatabaseService {
     });
   }
 
+  // 根据ID获取单个事件
+  async getEventById(id) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM adverse_events WHERE id = ?';
+      this.db.get(sql, [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
   // 获取统计信息（按天数）
   async getStatistics(days = 30) {
     return new Promise((resolve, reject) => {

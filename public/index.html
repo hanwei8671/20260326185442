@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>医疗器械合规管理平台</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         .header-bg { background: #004984; }
         .system-card {
@@ -99,8 +101,8 @@
                 </div>
             </a>
 
-            <!-- 内审管理系统 -->
-            <a href="/audit/index.html" class="system-card bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100 block">
+            <!-- 审核管理系统 -->
+            <div class="system-card bg-white rounded-2xl overflow-hidden shadow-lg border border-slate-100">
                 <div class="h-40 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center relative overflow-hidden">
                     <div class="absolute inset-0 opacity-10">
                         <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -114,12 +116,22 @@
                 </div>
                 <div class="p-6">
                     <div class="flex items-center gap-3 mb-3">
-                        <h3 class="text-xl font-bold text-slate-800">内审管理系统</h3>
+                        <h3 class="text-xl font-bold text-slate-800">审核管理系统</h3>
                         <span class="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-xs rounded-full">ISO 13485</span>
                     </div>
                     <p class="text-slate-600 text-sm mb-4">
                         管理内审计划、内审员档案、不符合项跟踪，确保质量体系持续合规
                     </p>
+                    <div class="flex flex-col gap-2 mt-4">
+                        <a href="/audit/index.html" class="flex items-center justify-between px-4 py-2 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition group">
+                            <span class="text-sm text-emerald-700 font-medium">内审计划管理</span>
+                            <i class="ri-arrow-right-line text-emerald-600 group-hover:translate-x-1 transition"></i>
+                        </a>
+                        <a href="/audit/external-audit.html" class="flex items-center justify-between px-4 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition group">
+                            <span class="text-sm text-blue-700 font-medium">外审CAPA管理</span>
+                            <i class="ri-arrow-right-line text-blue-600 group-hover:translate-x-1 transition"></i>
+                        </a>
+                    </div>
                     <div class="flex items-center gap-4 text-xs text-slate-500">
                         <span class="flex items-center gap-1">
                             <i class="ri-calendar-check-line"></i>
@@ -135,38 +147,42 @@
                         </span>
                     </div>
                 </div>
-            </a>
+            </div>
         </div>
 
         <!-- 功能特性 -->
-        <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div class="text-center">
-                <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <i class="ri-shield-check-line text-xl text-blue-600"></i>
+        <div style="margin-top: 4rem; max-width: 64rem; margin-left: auto; margin-right: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div style="display: flex; justify-content: space-around;">
+                <div style="text-align: center;">
+                    <div style="width: 3rem; height: 3rem; background: #dbeafe; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                        <i class="ri-shield-check-line" style="font-size: 1.25rem; color: #2563eb;"></i>
+                    </div>
+                    <h4 style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">合规驱动</h4>
+                    <p style="font-size: 0.75rem; color: #64748b;">符合法规要求</p>
                 </div>
-                <h4 class="font-semibold text-slate-800 mb-1">合规驱动</h4>
-                <p class="text-xs text-slate-500">符合法规要求</p>
+                <div style="text-align: center;">
+                    <div style="width: 3rem; height: 3rem; background: #f3e8ff; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                        <i class="ri-robot-line" style="font-size: 1.25rem; color: #9333ea;"></i>
+                    </div>
+                    <h4 style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">AI赋能</h4>
+                    <p style="font-size: 0.75rem; color: #64748b;">智能辅助分析</p>
+                </div>
             </div>
-            <div class="text-center">
-                <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <i class="ri-flow-chart text-xl text-green-600"></i>
+            <div style="display: flex; justify-content: space-around;">
+                <div style="text-align: center;">
+                    <div style="width: 3rem; height: 3rem; background: #dcfce7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                        <i class="ri-git-merge-line" style="font-size: 1.25rem; color: #16a34a;"></i>
+                    </div>
+                    <h4 style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">流程规范</h4>
+                    <p style="font-size: 0.75rem; color: #64748b;">标准化管理</p>
                 </div>
-                <h4 class="font-semibold text-slate-800 mb-1">流程规范</h4>
-                <p class="text-xs text-slate-500">标准化管理</p>
-            </div>
-            <div class="text-center">
-                <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <i class="ri-line-chart-line text-xl text-amber-600"></i>
+                <div style="text-align: center;">
+                    <div style="width: 3rem; height: 3rem; background: #fef3c7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
+                        <i class="ri-line-chart-line" style="font-size: 1.25rem; color: #d97706;"></i>
+                    </div>
+                    <h4 style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">数据分析</h4>
+                    <p style="font-size: 0.75rem; color: #64748b;">可视化报表</p>
                 </div>
-                <h4 class="font-semibold text-slate-800 mb-1">数据分析</h4>
-                <p class="text-xs text-slate-500">可视化报表</p>
-            </div>
-            <div class="text-center">
-                <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <i class="ri-robot-line text-xl text-purple-600"></i>
-                </div>
-                <h4 class="font-semibold text-slate-800 mb-1">AI赋能</h4>
-                <p class="text-xs text-slate-500">智能辅助分析</p>
             </div>
         </div>
     </main>

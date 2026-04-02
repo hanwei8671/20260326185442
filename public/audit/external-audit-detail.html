@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外审条目详情 - 审核管理系统</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://cdn.sheetjs.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .tooltip-container:hover .tooltip-box {
+            display: block !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="external-audit.html" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">外审条目详情</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 基本信息卡片 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <i class="ri-file-list-3-line text-blue-600"></i>
+                基本信息
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="text-sm text-gray-500">流水编号</label>
+                    <p class="text-gray-900 font-medium font-mono mt-1" id="info-serial-number">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">审核类型</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-audit-type">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">审核项目</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-project-name">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">项目编号</label>
+                    <p class="text-gray-900 font-medium font-mono mt-1" id="info-project-number">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">产品品牌</label>
+                    <p class="mt-1" id="info-product-brand">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">责任部门</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-department">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">审核日期</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-audit-date">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">完成整改时间</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-correction-due-date">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">质量工程师</label>
+                    <p class="text-gray-900 font-medium mt-1" id="info-quality-engineer">-</p>
+                </div>
+                <div>
+                    <label class="text-sm text-gray-500">CAPA数量</label>
+                    <p class="text-red-600 font-bold text-xl mt-1" id="info-nc-count">0</p>
+                </div>
+            </div>
+            <div class="mt-4" id="info-notes-container" style="display:none;">
+                <label class="text-sm text-gray-500">备注</label>
+                <p class="text-gray-700 mt-1" id="info-notes">-</p>
+            </div>
+        </div>
+
+        <!-- CAPA列表 -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="ri-error-warning-line text-red-600"></i>
+                    CAPA列表
+                </h2>
+                <div class="flex gap-2">
+                    <select id="filterStatus" onchange="loadCAPA()" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm">
+                        <option value="">全部状态</option>
+                        <option value="open">待处理</option>
+                        <option value="in_progress">处理中</option>
+                        <option value="corrected">已纠正</option>
+                        <option value="verified">已验证</option>
+                        <option value="closed">已关闭</option>
+                    </select>
+                    <button onclick="exportCAPA()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                        <i class="ri-download-line mr-1"></i>导出Excel
+                    </button>
+                    <button onclick="showAddCAPAModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">
+                        <i class="ri-add-line mr-1"></i>添加CAPA
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">CAPA编号</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">不符合事实描述</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">严重程度</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">责任人</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">完成日期</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capaTableBody" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="7" class="px-4 py-12 text-center text-gray-400">
+                                <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                暂无CAPA数据
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- 添加CAPA弹窗 -->
+    <div id="modal-add-capa" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">添加CAPA</h3>
+                <button onclick="closeModal('modal-add-capa')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-add-capa" class="p-4 space-y-4">
+                <!-- 文件上传区域 - 支持拖拽 -->
+                <div id="drop-zone" class="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 transition-all duration-200 hover:border-blue-400 hover:bg-blue-50">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">上传CAPA文档自动填充</p>
+                            <p class="text-xs text-gray-500 mt-1">支持 .doc, .docx, .pdf 格式，可拖拽上传</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="file" id="capa-document-input" accept=".doc,.docx,.pdf" class="hidden" onchange="handleDocumentUpload(this)">
+                            <button type="button" onclick="document.getElementById('capa-document-input').click()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                                <i class="ri-upload-line mr-1"></i>选择文件
+                            </button>
+                            <span id="upload-status" class="text-sm text-gray-500"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CAPA编号 *</label>
+                        <input type="text" id="display-capa-number" name="capa_number" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" style="cursor:text;">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">严重程度 *</label>
+                        <select name="category" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="严重">严重</option>
+                            <option value="一般" selected>一般</option>
+                            <option value="观察项">观察项</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不符合事实描述 *</label>
+                    <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required placeholder="详细描述不符合的事实"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">条款引用</label>
+                        <input type="text" name="clause_reference" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="如：ISO 13485 7.3.2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任人</label>
+                        <input type="text" name="responsible_person" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="负责整改的人员">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正</label>
+                    <textarea name="correction" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="为消除已发现的不合格所采取的措施"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不合格调查</label>
+                    <textarea name="investigation" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="不合格原因调查分析"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正/预防措施CAPA</label>
+                    <textarea name="capa_action" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="为消除已发现的不合格或其他不期望情况的原因所采取的措施"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">整改完成日期</label>
+                        <input type="date" name="due_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="open">待处理</option>
+                            <option value="in_progress">处理中</option>
+                            <option value="corrected">已纠正</option>
+                            <option value="verified">已验证</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-add-capa')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 查看/编辑CAPA弹窗 -->
+    <div id="modal-edit-capa" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">CAPA详情</h3>
+                <button onclick="closeModal('modal-edit-capa')" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+            </div>
+            <form id="form-edit-capa" class="p-4 space-y-4">
+                <input type="hidden" id="edit-capa-id">
+                <!-- 文件上传区域 - 支持拖拽 -->
+                <div id="edit-drop-zone" class="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 transition-all duration-200 hover:border-blue-400 hover:bg-blue-50">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">上传文档自动填充</p>
+                            <p class="text-xs text-gray-500 mt-1">支持 .doc, .docx, .pdf 格式，可拖拽上传</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="file" id="edit-document-input" accept=".doc,.docx,.pdf" class="hidden" onchange="handleEditDocumentUpload(this)">
+                            <button type="button" onclick="document.getElementById('edit-document-input').click()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                                <i class="ri-upload-line mr-1"></i>选择文件
+                            </button>
+                            <span id="edit-upload-status" class="text-sm text-gray-500"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CAPA编号</label>
+                        <input type="text" id="edit-capa-number" name="capa_number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white" style="cursor:text;">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">严重程度</label>
+                        <select name="category" id="edit-capa-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="严重">严重</option>
+                            <option value="一般">一般</option>
+                            <option value="观察项">观察项</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不符合事实描述</label>
+                    <textarea name="description" id="edit-capa-description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">条款引用</label>
+                        <input type="text" name="clause_reference" id="edit-capa-clause" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任人</label>
+                        <input type="text" name="responsible_person" id="edit-capa-responsible" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正</label>
+                    <textarea name="correction" id="edit-capa-correction" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不合格调查</label>
+                    <textarea name="investigation" id="edit-capa-investigation" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正/预防措施CAPA</label>
+                    <textarea name="capa_action" id="edit-capa-capa-action" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">整改完成日期</label>
+                        <input type="date" name="due_date" id="edit-capa-due-date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select name="status" id="edit-capa-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="open">待处理</option>
+                            <option value="in_progress">处理中</option>
+                            <option value="corrected">已纠正</option>
+                            <option value="verified">已验证</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">验证结果</label>
+                    <textarea name="verification_result" id="edit-capa-verification" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="验证整改效果的结果"></textarea>
+                </div>
+                <div class="flex justify-between gap-2 pt-4 border-t">
+                    <button type="button" onclick="deleteCAPA()" class="px-4 py-2 text-red-600 hover:text-red-800 text-sm">
+                        <i class="ri-delete-bin-line mr-1"></i>删除
+                    </button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeModal('modal-edit-capa')" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm">取消</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">保存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let auditId = null;
+        let auditInfo = null;
+        let capaList = [];
+
+        // 获取URL参数
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // 初始化
+        async function init() {
+            auditId = getQueryParam('id');
+            if (!auditId) {
+                alert('缺少外审条目ID');
+                window.history.back();
+                return;
+            }
+            await loadAuditInfo();
+            await loadCAPA();
+        }
+
+        // 加载外审条目信息
+        async function loadAuditInfo() {
+            try {
+                const res = await fetch(`/audit/api/external-audits/${auditId}`);
+                const result = await res.json();
+                auditInfo = result.data;
+                
+                document.getElementById('info-serial-number').textContent = auditInfo.serial_number || '-';
+                document.getElementById('info-audit-type').textContent = auditInfo.audit_type || '-';
+                document.getElementById('info-project-name').textContent = auditInfo.project_name || '-';
+                document.getElementById('info-project-number').textContent = auditInfo.project_number || '-';
+                document.getElementById('info-audit-date').textContent = auditInfo.audit_date || '-';
+                document.getElementById('info-correction-due-date').textContent = auditInfo.correction_due_date || '-';
+                document.getElementById('info-quality-engineer').textContent = auditInfo.quality_engineer || '-';
+                document.getElementById('info-nc-count').textContent = auditInfo.nc_count || 0;
+                document.getElementById('info-department').textContent = auditInfo.responsible_department || '-';
+                
+                if (auditInfo.product_brand) {
+                    const brandHtml = `<span class="px-2 py-1 rounded text-xs font-medium ${auditInfo.product_brand === 'MT' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${auditInfo.product_brand}</span>`;
+                    document.getElementById('info-product-brand').innerHTML = brandHtml;
+                }
+                
+                if (auditInfo.notes) {
+                    document.getElementById('info-notes').textContent = auditInfo.notes;
+                    document.getElementById('info-notes-container').style.display = 'block';
+                }
+            } catch (err) {
+                console.error('加载外审条目信息失败:', err);
+            }
+        }
+
+        // 加载CAPA列表
+        async function loadCAPA() {
+            const status = document.getElementById('filterStatus').value;
+            const params = new URLSearchParams({ external_audit_id: auditId });
+            if (status) params.append('status', status);
+            
+            try {
+                const res = await fetch(`/audit/api/external-capa?${params}`);
+                const result = await res.json();
+                capaList = result.data || [];
+                renderCAPATable();
+            } catch (err) {
+                console.error('加载CAPA失败:', err);
+            }
+        }
+
+        // 渲染CAPA表格
+        function renderCAPATable() {
+            const tbody = document.getElementById('capaTableBody');
+            
+            if (capaList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-gray-400">
+                            <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                            暂无CAPA数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const statusMap = {
+                'open': { label: '待处理', class: 'bg-yellow-100 text-yellow-700' },
+                'in_progress': { label: '处理中', class: 'bg-blue-100 text-blue-700' },
+                'corrected': { label: '已纠正', class: 'bg-purple-100 text-purple-700' },
+                'verified': { label: '已验证', class: 'bg-green-100 text-green-700' },
+                'closed': { label: '已关闭', class: 'bg-gray-100 text-gray-700' }
+            };
+
+            const categoryMap = {
+                '严重': 'bg-red-100 text-red-700',
+                '一般': 'bg-orange-100 text-orange-700',
+                '观察项': 'bg-blue-100 text-blue-700'
+            };
+
+            tbody.innerHTML = capaList.map(capa => {
+                const statusInfo = statusMap[capa.status] || statusMap['open'];
+                const descPreview = capa.description ? (capa.description.length > 30 ? capa.description.substring(0, 30) + '...' : capa.description) : '-';
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm text-gray-900 font-mono">
+                            <a href="capa-detail.html?id=${capa.id}" class="text-blue-600 hover:text-blue-800 hover:underline">${capa.capa_number || '-'}</a>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900 max-w-xs">
+                            <div class="tooltip-container relative cursor-pointer" style="width:100%;">
+                                <span class="truncate block">${descPreview}</span>
+                                ${capa.description && capa.description.length > 30 ? `
+                                <div class="tooltip-box absolute left-0 top-full mt-2 p-4 bg-yellow-50 border border-yellow-300 text-gray-800 text-sm rounded-lg shadow-xl z-50 w-[500px] max-h-96 overflow-y-auto" style="display:none;">
+                                    ${capa.description}
+                                </div>
+                                ` : ''}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${categoryMap[capa.category] || ''}">${capa.category || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">${capa.responsible_person || '-'}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">${capa.due_date || '-'}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${statusInfo.class}">${statusInfo.label}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 显示添加CAPA弹窗
+        function showAddCAPAModal() {
+            document.getElementById('form-add-capa').reset();
+            document.getElementById('display-capa-number').value = '';
+            document.getElementById('upload-status').textContent = '';
+            setupDragDrop();
+            showModal('modal-add-capa');
+        }
+
+        // 设置拖拽上传
+        function setupDragDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            if (!dropZone) return;
+
+            // 移除旧的事件监听器（防止重复绑定）
+            dropZone.ondragover = null;
+            dropZone.ondragleave = null;
+            dropZone.ondrop = null;
+
+            dropZone.ondragover = (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondragleave = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['doc', 'docx', 'pdf'].includes(ext)) {
+                        uploadFile(file);
+                    } else {
+                        document.getElementById('upload-status').textContent = '不支持的文件格式';
+                        document.getElementById('upload-status').className = 'text-sm text-red-600';
+                    }
+                }
+            };
+        }
+
+        // 处理文件上传（点击选择）
+        function handleDocumentUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+            input.value = '';
+        }
+
+        // 上传文件并解析
+        async function uploadFile(file) {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.textContent = '正在解析...';
+            statusEl.className = 'text-sm text-blue-600';
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            try {
+                const res = await fetch('/audit/api/parse-capa-document', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+
+                if (result.success && result.data) {
+                    const data = result.data;
+                    // 自动填充表单
+                    if (data.capa_number) {
+                        document.getElementById('display-capa-number').value = data.capa_number;
+                    }
+                    if (data.description) {
+                        document.querySelector('textarea[name="description"]').value = data.description;
+                    }
+                    if (data.category) {
+                        document.querySelector('select[name="category"]').value = data.category;
+                    }
+                    if (data.clause_reference) {
+                        document.querySelector('input[name="clause_reference"]').value = data.clause_reference;
+                    }
+                    if (data.responsible_person) {
+                        document.querySelector('input[name="responsible_person"]').value = data.responsible_person;
+                    }
+                    if (data.correction) {
+                        document.querySelector('textarea[name="correction"]').value = data.correction;
+                    }
+                    if (data.investigation) {
+                        document.querySelector('textarea[name="investigation"]').value = data.investigation;
+                    }
+                    if (data.capa_action) {
+                        document.querySelector('textarea[name="capa_action"]').value = data.capa_action;
+                    }
+                    if (data.due_date) {
+                        document.querySelector('input[name="due_date"]').value = data.due_date;
+                    }
+                    statusEl.textContent = '解析成功';
+                    statusEl.className = 'text-sm text-green-600';
+                } else {
+                    statusEl.textContent = '解析失败';
+                    statusEl.className = 'text-sm text-red-600';
+                }
+            } catch (err) {
+                console.error('上传失败:', err);
+                statusEl.textContent = '上传失败';
+                statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        // 编辑CAPA
+        async function editCAPA(id) {
+            try {
+                const res = await fetch(`/audit/api/external-capa/${id}`);
+                const result = await res.json();
+                const capa = result.data;
+                
+                document.getElementById('edit-capa-id').value = capa.id;
+                document.getElementById('edit-capa-number').value = capa.capa_number || '';
+                document.getElementById('edit-capa-category').value = capa.category || '一般';
+                document.getElementById('edit-capa-description').value = capa.description || '';
+                document.getElementById('edit-capa-clause').value = capa.clause_reference || '';
+                document.getElementById('edit-capa-responsible').value = capa.responsible_person || '';
+                document.getElementById('edit-capa-correction').value = capa.correction || '';
+                document.getElementById('edit-capa-investigation').value = capa.investigation || '';
+                document.getElementById('edit-capa-capa-action').value = capa.capa_action || '';
+                document.getElementById('edit-capa-due-date').value = capa.due_date || '';
+                document.getElementById('edit-capa-status').value = capa.status || 'open';
+                document.getElementById('edit-capa-verification').value = capa.verification_result || '';
+                document.getElementById('edit-upload-status').textContent = '';
+                
+                setupEditDragDrop();
+                showModal('modal-edit-capa');
+            } catch (err) {
+                alert('获取CAPA数据失败');
+            }
+        }
+
+        // 设置编辑弹窗拖拽上传
+        function setupEditDragDrop() {
+            const dropZone = document.getElementById('edit-drop-zone');
+            if (!dropZone) return;
+
+            dropZone.ondragover = (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondragleave = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['doc', 'docx', 'pdf'].includes(ext)) {
+                        uploadEditFile(file);
+                    } else {
+                        document.getElementById('edit-upload-status').textContent = '不支持的文件格式';
+                        document.getElementById('edit-upload-status').className = 'text-sm text-red-600';
+                    }
+                }
+            };
+        }
+
+        // 处理编辑弹窗文件上传（点击选择）
+        function handleEditDocumentUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                uploadEditFile(file);
+            }
+            input.value = '';
+        }
+
+        // 上传文件并填充编辑表单
+        async function uploadEditFile(file) {
+            const statusEl = document.getElementById('edit-upload-status');
+            statusEl.textContent = '正在解析...';
+            statusEl.className = 'text-sm text-blue-600';
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            try {
+                const res = await fetch('/audit/api/parse-capa-document', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+
+                if (result.success && result.data) {
+                    const data = result.data;
+                    if (data.capa_number) {
+                        document.getElementById('edit-capa-number').value = data.capa_number;
+                    }
+                    if (data.description) {
+                        document.getElementById('edit-capa-description').value = data.description;
+                    }
+                    if (data.category) {
+                        document.getElementById('edit-capa-category').value = data.category;
+                    }
+                    if (data.clause_reference) {
+                        document.getElementById('edit-capa-clause').value = data.clause_reference;
+                    }
+                    if (data.responsible_person) {
+                        document.getElementById('edit-capa-responsible').value = data.responsible_person;
+                    }
+                    if (data.correction) {
+                        document.getElementById('edit-capa-correction').value = data.correction;
+                    }
+                    if (data.investigation) {
+                        document.getElementById('edit-capa-investigation').value = data.investigation;
+                    }
+                    if (data.capa_action) {
+                        document.getElementById('edit-capa-capa-action').value = data.capa_action;
+                    }
+                    if (data.due_date) {
+                        document.getElementById('edit-capa-due-date').value = data.due_date;
+                    }
+                    statusEl.textContent = '解析成功';
+                    statusEl.className = 'text-sm text-green-600';
+                } else {
+                    statusEl.textContent = '解析失败';
+                    statusEl.className = 'text-sm text-red-600';
+                }
+            } catch (err) {
+                console.error('上传失败:', err);
+                statusEl.textContent = '上传失败';
+                statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        // 删除CAPA
+        async function deleteCAPA() {
+            const id = document.getElementById('edit-capa-id').value;
+            if (!confirm('确定要删除此CAPA吗？')) return;
+            
+            try {
+                await fetch(`/audit/api/external-capa/${id}`, { method: 'DELETE' });
+                closeModal('modal-edit-capa');
+                loadCAPA();
+                loadAuditInfo();
+            } catch (err) {
+                alert('删除失败');
+            }
+        }
+
+        // 提交添加CAPA表单
+        document.getElementById('form-add-capa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            data.external_audit_id = auditId;
+            data.capa_number = document.getElementById('display-capa-number').value;
+            
+            try {
+                const res = await fetch('/audit/api/external-capa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                
+                if (result.error) {
+                    if (result.error.includes('UNIQUE constraint')) {
+                        alert('CAPA编号已存在，请修改编号后重试！');
+                        document.getElementById('display-capa-number').focus();
+                    } else {
+                        alert('保存失败: ' + result.error);
+                    }
+                } else {
+                    closeModal('modal-add-capa');
+                    loadCAPA();
+                    loadAuditInfo();
+                }
+            } catch (err) {
+                alert('保存失败');
+            }
+        });
+
+        // 提交编辑CAPA表单
+        document.getElementById('form-edit-capa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit-capa-id').value;
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const res = await fetch(`/audit/api/external-capa/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                
+                if (result.error) {
+                    alert('保存失败: ' + result.error);
+                } else {
+                    closeModal('modal-edit-capa');
+                    loadCAPA();
+                }
+            } catch (err) {
+                alert('保存失败');
+            }
+        });
+
+        // 导出Excel
+        function exportCAPA() {
+            if (capaList.length === 0) {
+                alert('没有可导出的数据');
+                return;
+            }
+
+            const headers = ['CAPA编号', '不符合事实描述', '严重程度', '条款引用', '责任人', 
+                           '纠正', '不合格调查', '纠正/预防措施CAPA', '整改完成日期', '验证结果', '状态'];
+            
+            const statusMap = {
+                'open': '待处理',
+                'in_progress': '处理中',
+                'corrected': '已纠正',
+                'verified': '已验证',
+                'closed': '已关闭'
+            };
+
+            const rows = capaList.map(capa => [
+                capa.capa_number,
+                capa.description,
+                capa.category,
+                capa.clause_reference,
+                capa.responsible_person,
+                capa.correction,
+                capa.investigation,
+                capa.capa_action,
+                capa.due_date,
+                capa.verification_result,
+                statusMap[capa.status] || capa.status
+            ]);
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'CAPA');
+            
+            const fileName = `外审CAPA_${auditInfo.serial_number}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // 弹窗控制
+        function showModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('flex');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('flex');
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

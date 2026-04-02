@@ -143,9 +143,57 @@ CREATE TABLE IF NOT EXISTS auditor_experience (
     FOREIGN KEY (plan_id) REFERENCES audit_plans(id)
 );
 
+-- 外审条目表
+CREATE TABLE IF NOT EXISTS external_audits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    serial_number TEXT UNIQUE NOT NULL,
+    audit_type TEXT NOT NULL,
+    project_name TEXT NOT NULL,
+    project_number TEXT NOT NULL,
+    product_brand TEXT CHECK(product_brand IN ('MT', 'TR')),
+    responsible_department TEXT CHECK(responsible_department IN ('设备研发', '耗材研发', '产品管理')),
+    audit_date DATE NOT NULL,
+    correction_due_date DATE,
+    quality_engineer TEXT,
+    nc_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 外审CAPA表
+CREATE TABLE IF NOT EXISTS external_capa (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    external_audit_id INTEGER NOT NULL,
+    capa_number TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT CHECK(category IN ('严重', '一般', '观察项')),
+    clause_reference TEXT,
+    process_area TEXT,
+    evidence TEXT,
+    root_cause TEXT,
+    correction TEXT,
+    corrective_action TEXT,
+    preventive_action TEXT,
+    responsible_person TEXT,
+    due_date DATE,
+    completion_date DATE,
+    verification_result TEXT,
+    status TEXT DEFAULT 'open' CHECK(status IN ('open', 'in_progress', 'corrected', 'verified', 'closed')),
+    attachments TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (external_audit_id) REFERENCES external_audits(id)
+);
+
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_audit_plans_status ON audit_plans(status);
 CREATE INDEX IF NOT EXISTS idx_audit_plans_dates ON audit_plans(planned_start_date, planned_end_date);
 CREATE INDEX IF NOT EXISTS idx_auditors_status ON auditors(status);
 CREATE INDEX IF NOT EXISTS idx_nonconformities_status ON nonconformities(status);
 CREATE INDEX IF NOT EXISTS idx_nonconformities_plan ON nonconformities(plan_id);
+CREATE INDEX IF NOT EXISTS idx_external_audits_status ON external_audits(status);
+CREATE INDEX IF NOT EXISTS idx_external_capa_audit ON external_capa(external_audit_id);
+CREATE INDEX IF NOT EXISTS idx_external_capa_status ON external_capa(status);

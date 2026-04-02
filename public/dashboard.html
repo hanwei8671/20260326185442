@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>竞品医疗器械不良事件监控</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .header-bg { background: #004984; }
@@ -43,7 +45,7 @@
                         <span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
                         运行中
                     </span>
-                    <button onclick="triggerUpdate()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm transition flex items-center gap-2">
+                    <button onclick="openUpdateModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm transition flex items-center gap-2">
                         <i class="ri-refresh-line"></i>
                         立即更新
                     </button>
@@ -394,33 +396,69 @@
             });
         }
 
+        // 打开更新时间范围选择弹窗
+        function openUpdateModal() {
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+            document.getElementById('updateStartDate').value = weekAgo;
+            document.getElementById('updateEndDate').value = today;
+            document.getElementById('updateDaysSelect').value = '7';
+            document.getElementById('updateModal').classList.remove('hidden');
+        }
+
+        function closeUpdateModal() {
+            document.getElementById('updateModal').classList.add('hidden');
+        }
+
         // 触发数据更新
         async function triggerUpdate() {
-            if (!confirm('确定要立即更新数据吗？')) return;
-            
+            const startDate = document.getElementById('updateStartDate').value;
+            const endDate = document.getElementById('updateEndDate').value;
+            let params = {};
+            let updateDays = 180;
+
+            // 如果填写了自定义日期，优先使用自定义日期
+            if (startDate && endDate) {
+                if (startDate > endDate) {
+                    alert('开始日期不能晚于结束日期');
+                    return;
+                }
+                params = { startDate, endDate };
+                const diffMs = new Date(endDate) - new Date(startDate);
+                updateDays = Math.ceil(diffMs / 86400000);
+            } else {
+                // 否则使用快捷选择的天数
+                const days = parseInt(document.getElementById('updateDaysSelect').value);
+                params = { days };
+                updateDays = days;
+            }
+
+            closeUpdateModal();
+
             try {
-                const btn = document.querySelector('button[onclick="triggerUpdate()"]');
+                const btn = document.querySelector('button[onclick="openUpdateModal()"]');
                 btn.disabled = true;
                 btn.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> 更新中...';
                 
                 const response = await fetch('/api/trigger-update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ days: 7 })
+                    body: JSON.stringify(params)
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('数据更新完成！');
-                    loadDashboardData();
+                    const msg = `数据更新完成！\n共处理 ${result.totalEvents || 0} 条记录\n处理竞品 ${result.competitorsProcessed ? result.competitorsProcessed.length : 0} 个`;
+                    alert(msg);
+                    window.location.reload();
                 } else {
-                    alert('更新失败: ' + result.message);
+                    alert('更新失败: ' + (result.message || result.error || '未知错误'));
                 }
             } catch (error) {
-                alert('更新失败: ' + error.message);
+                alert('请求失败: ' + error.message);
             } finally {
-                const btn = document.querySelector('button[onclick="triggerUpdate()"]');
+                const btn = document.querySelector('button[onclick="openUpdateModal()"]');
                 btn.disabled = false;
                 btn.innerHTML = '<i class="ri-refresh-line"></i> 立即更新';
             }
@@ -495,5 +533,47 @@
             renderCompetitorList(filtered);
         }
     </script>
+
+    <!-- 更新时间范围选择弹窗 v3 -->
+    <div id="updateModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50" onclick="if(event.target===this) closeUpdateModal()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">选择更新时间范围</h3>
+            
+            <!-- 快捷选择 -->
+            <div class="mb-4">
+                <label class="text-sm font-medium text-gray-700 mb-2 block">快捷选择天数:</label>
+                <select id="updateDaysSelect" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                    <option value="7">最近7天</option>
+                    <option value="30">最近30天</option>
+                    <option value="90">最近90天</option>
+                    <option value="180">最近180天</option>
+                    <option value="365">最近1年</option>
+                </select>
+            </div>
+            
+            <!-- 分隔线 -->
+            <div class="flex items-center gap-3 my-4">
+                <div class="flex-1 border-t border-gray-200"></div>
+                <span class="text-sm text-gray-400">或者</span>
+                <div class="flex-1 border-t border-gray-200"></div>
+            </div>
+            
+            <!-- 自定义日期 -->
+            <div class="mb-4">
+                <label class="text-sm font-medium text-gray-700 mb-2 block">自定义日期范围:</label>
+                <div class="flex items-center gap-2">
+                    <input type="date" id="updateStartDate" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                    <span class="text-gray-400">至</span>
+                    <input type="date" id="updateEndDate" class="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                </div>
+                <p class="text-xs text-gray-400 mt-1">* 填写自定义日期后将忽略快捷选择</p>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <button onclick="closeUpdateModal()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">取消</button>
+                <button onclick="triggerUpdate()" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">开始更新</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

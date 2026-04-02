@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPA列表 - 审核管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/audit/external-audit.html" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">CAPA列表</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="external-audit.html" class="bg-white text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-100 transition border border-blue-200">
+                        <i class="ri-file-list-3-line mr-1"></i>外审条目
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">CAPA总数</p>
+                        <p class="text-2xl font-bold text-gray-800 mt-1" id="stat-total">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-file-list-3-line text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">待处理</p>
+                        <p class="text-2xl font-bold text-red-600 mt-1" id="stat-open">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-error-warning-line text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">处理中</p>
+                        <p class="text-2xl font-bold text-yellow-600 mt-1" id="stat-progress">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-time-line text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">已验证</p>
+                        <p class="text-2xl font-bold text-green-600 mt-1" id="stat-verified">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                        <i class="ri-check-double-line text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">已关闭</p>
+                        <p class="text-2xl font-bold text-gray-600 mt-1" id="stat-closed">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <i class="ri-checkbox-circle-line text-gray-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAPA列表 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
+                <h3 class="font-bold text-gray-800">
+                    <i class="ri-error-warning-line mr-2 text-red-600"></i>CAPA列表
+                    <span id="capa-count" class="text-sm font-normal text-gray-500 ml-2">(0)</span>
+                </h3>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <input type="text" id="searchKeyword" placeholder="搜索CAPA编号、描述..." 
+                           class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
+                           onkeyup="if(event.keyCode===13) loadData()">
+                    <select id="filterStatus" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadData()">
+                        <option value="">全部状态</option>
+                        <option value="open">待处理</option>
+                        <option value="in_progress">处理中</option>
+                        <option value="corrected">已纠正</option>
+                        <option value="verified">已验证</option>
+                        <option value="closed">已关闭</option>
+                    </select>
+                    <select id="filterCategory" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadData()">
+                        <option value="">全部程度</option>
+                        <option value="严重">严重</option>
+                        <option value="一般">一般</option>
+                        <option value="观察项">观察项</option>
+                    </select>
+                    <select id="filterBrand" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm" onchange="loadData()">
+                        <option value="">全部品牌</option>
+                        <option value="MT">MT</option>
+                        <option value="TR">TR</option>
+                    </select>
+                    <button onclick="loadData()" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition">
+                        <i class="ri-search-line mr-1"></i>搜索
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">CAPA编号</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">问题描述</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">所属外审</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">品牌</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">严重程度</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">责任人</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">截止日期</th>
+                            <th class="px-4 py-3 text-left font-medium text-gray-600">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                                <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                                暂无数据
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allData = [];
+
+        // 加载数据
+        async function loadData() {
+            const keyword = document.getElementById('searchKeyword').value;
+            const status = document.getElementById('filterStatus').value;
+            const category = document.getElementById('filterCategory').value;
+            const brand = document.getElementById('filterBrand').value;
+            
+            const params = new URLSearchParams();
+            if (keyword) params.append('keyword', keyword);
+            if (status) params.append('status', status);
+            if (category) params.append('category', category);
+            if (brand) params.append('brand', brand);
+            
+            try {
+                const res = await fetch(`/audit/api/external-capa/all?${params}`);
+                const result = await res.json();
+                allData = result.data || [];
+                renderTable();
+                updateStats();
+            } catch (err) {
+                console.error('加载数据失败:', err);
+            }
+        }
+
+        // 更新统计
+        function updateStats() {
+            document.getElementById('stat-total').textContent = allData.length;
+            document.getElementById('capa-count').textContent = `(${allData.length})`;
+            document.getElementById('stat-open').textContent = allData.filter(d => d.status === 'open').length;
+            document.getElementById('stat-progress').textContent = allData.filter(d => d.status === 'in_progress').length;
+            document.getElementById('stat-verified').textContent = allData.filter(d => d.status === 'verified').length;
+            document.getElementById('stat-closed').textContent = allData.filter(d => d.status === 'closed').length;
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            
+            if (allData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                            <i class="ri-inbox-line text-4xl mb-2 block"></i>
+                            暂无数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const statusMap = {
+                'open': { text: '待处理', class: 'bg-red-100 text-red-700' },
+                'in_progress': { text: '处理中', class: 'bg-yellow-100 text-yellow-700' },
+                'corrected': { text: '已纠正', class: 'bg-blue-100 text-blue-700' },
+                'verified': { text: '已验证', class: 'bg-green-100 text-green-700' },
+                'closed': { text: '已关闭', class: 'bg-gray-100 text-gray-700' }
+            };
+            
+            const categoryMap = {
+                '严重': 'bg-red-100 text-red-700',
+                '一般': 'bg-yellow-100 text-yellow-700',
+                '观察项': 'bg-blue-100 text-blue-700'
+            };
+
+            tbody.innerHTML = allData.map(item => {
+                const statusInfo = statusMap[item.status] || { text: item.status, class: 'bg-gray-100 text-gray-700' };
+                const categoryClass = categoryMap[item.category] || 'bg-gray-100 text-gray-700';
+                const brandClass = item.product_brand === 'MT' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700';
+                
+                return `
+                    <tr class="hover:bg-gray-50 cursor-pointer border-b border-gray-100" onclick="viewDetail(${item.external_audit_id}, ${item.id})">
+                        <td class="px-4 py-3 font-medium text-blue-600">${item.capa_number || '-'}</td>
+                        <td class="px-4 py-3 text-gray-900 max-w-xs truncate" title="${item.description || ''}">${item.description || '-'}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.project_number || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${brandClass}">${item.product_brand || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${categoryClass}">${item.category || '-'}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">${item.responsible_person || '-'}</td>
+                        <td class="px-4 py-3 text-gray-600">${item.due_date || '-'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusInfo.class}">${statusInfo.text}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 查看详情
+        function viewDetail(externalAuditId, capaId) {
+            window.location.href = `external-audit-detail.html?id=${externalAuditId}&capaId=${capaId}`;
+        }
+
+        // 初始化
+        loadData();
+    </script>
+</body>
+</html>

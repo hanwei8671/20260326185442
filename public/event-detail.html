@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>不良事件详情 - MDR Agent</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         .header-bg { background: #004984; }
         .risk-high { background-color: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
@@ -46,7 +48,7 @@
         <!-- 返回按钮 -->
         <div class="mb-4">
             <button onclick="goBack()" class="text-blue-600 hover:text-blue-800">
-                <i class="fas fa-arrow-left mr-2"></i>返回列表
+                <i class="ri-arrow-left-line mr-1"></i>返回列表
             </button>
         </div>
 
@@ -64,7 +66,7 @@
                 <!-- 左列 -->
                 <div>
                     <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
-                        <i class="fas fa-device text-blue-500 mr-2"></i>产品信息
+                        <i class="ri-device-line text-blue-500 mr-1"></i>产品信息
                     </h3>
                     <div class="space-y-3">
                         <div class="flex">
@@ -105,7 +107,7 @@
                 <!-- 右列 -->
                 <div>
                     <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
-                        <i class="fas fa-calendar text-blue-500 mr-2"></i>事件信息
+                        <i class="ri-calendar-line text-blue-500 mr-1"></i>事件信息
                     </h3>
                     <div class="space-y-3">
                         <div class="flex">
@@ -139,7 +141,7 @@
         <!-- 患者信息 -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6" id="patientSection">
             <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
-                <i class="fas fa-user text-blue-500 mr-2"></i>患者信息
+                <i class="ri-user-line text-blue-500 mr-1"></i>患者信息
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex">
@@ -167,7 +169,7 @@
         <!-- 事件描述 -->
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
-                <i class="fas fa-align-left text-blue-500 mr-2"></i>事件描述
+                <i class="ri-file-text-line text-blue-500 mr-1"></i>事件描述
             </h3>
             <div class="bilingual-block pl-3">
                 <div class="bilingual-en bg-gray-50 p-4 rounded-lg whitespace-pre-wrap text-gray-700" id="eventDescriptionEn">
@@ -181,10 +183,10 @@
         <div class="bg-white rounded-xl shadow-sm p-6" id="rawDataSection">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-bold text-gray-800">
-                    <i class="fas fa-code text-blue-500 mr-2"></i>原始数据
+                    <i class="ri-code-line text-blue-500 mr-1"></i>原始数据
                 </h3>
                 <button onclick="toggleRawData()" class="text-blue-600 hover:text-blue-800 text-sm">
-                    <i class="fas fa-eye mr-1"></i>展开/收起
+                    <i class="ri-eye-line mr-1"></i>展开/收起
                 </button>
             </div>
             <pre class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-xs text-gray-600 hidden" id="rawData">
@@ -222,21 +224,17 @@
         // 加载事件详情
         async function loadEventDetail() {
             try {
-                // 通过ID获取事件
-                const response = await fetch(`/api/events?limit=1000`);
+                // 直接通过ID获取单条事件
+                const response = await fetch(`/api/events/${eventId}`);
                 const result = await response.json();
-                
-                if (result.success) {
-                    eventData = result.data.find(e => e.id == eventId);
-                    
-                    if (!eventData) {
-                        alert('未找到该事件');
-                        window.location.href = '/';
-                        return;
-                    }
-                    
+
+                if (result.success && result.data) {
+                    eventData = result.data;
                     competitorId = eventData.competitor_id;
                     renderEventDetail(eventData);
+                } else {
+                    alert('未找到该事件');
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('加载事件详情失败:', error);

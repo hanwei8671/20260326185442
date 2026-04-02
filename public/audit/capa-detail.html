@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAPA详情 - 审核管理系统</title>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .header-bg { background: #004984; }
+        .readonly-field { background-color: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="header-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="flex items-center gap-3 hover:opacity-90">
+                        <img src="/logo.svg" alt="Micro-Tech" class="h-8">
+                        <span class="text-lg font-medium opacity-80">|</span>
+                        <h1 class="text-lg font-bold">CAPA详情</h1>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="goBack()" class="px-4 py-2 bg-white bg-opacity-20 rounded-lg text-sm hover:bg-opacity-30 transition">
+                        <i class="ri-arrow-go-back-line mr-1"></i>返回
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-5xl mx-auto px-4 py-6">
+        <!-- 基本信息卡片 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="ri-file-list-3-line text-blue-600"></i>
+                    CAPA信息
+                </h2>
+                <div id="actionButtons" class="flex gap-2">
+                    <button onclick="enableEdit()" id="btnEdit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                        <i class="ri-edit-line mr-1"></i>修改
+                    </button>
+                    <button onclick="deleteCAPA()" id="btnDelete" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-sm hover:bg-red-200 transition">
+                        <i class="ri-delete-bin-line mr-1"></i>删除
+                    </button>
+                    <button onclick="saveCAPA()" id="btnSave" class="hidden px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition">
+                        <i class="ri-save-line mr-1"></i>保存
+                    </button>
+                    <button onclick="cancelEdit()" id="btnCancel" class="hidden px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition">
+                        取消
+                    </button>
+                </div>
+            </div>
+
+            <!-- 外审信息 -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-3">所属外审条目</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="text-xs text-gray-500">流水编号</label>
+                        <p class="text-gray-900 font-medium font-mono mt-1" id="audit-serial">-</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">审核类型</label>
+                        <p class="text-gray-900 font-medium mt-1" id="audit-type">-</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">项目编号</label>
+                        <p class="text-gray-900 font-medium font-mono mt-1" id="audit-project">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件上传区域（编辑模式显示） -->
+            <div id="uploadSection" class="hidden bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-300 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">上传文档自动填充</p>
+                        <p class="text-xs text-gray-500 mt-1">支持 .doc, .docx, .pdf 格式，可拖拽上传</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="file" id="document-input" accept=".doc,.docx,.pdf" class="hidden" onchange="handleDocumentUpload(this)">
+                        <button type="button" onclick="document.getElementById('document-input').click()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">
+                            <i class="ri-upload-line mr-1"></i>选择文件
+                        </button>
+                        <span id="upload-status" class="text-sm text-gray-500"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CAPA表单 -->
+            <form id="capaForm" class="space-y-4">
+                <input type="hidden" id="capaId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">CAPA编号</label>
+                        <input type="text" id="capaNumber" name="capa_number" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">严重程度</label>
+                        <select id="category" name="category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" disabled>
+                            <option value="严重">严重</option>
+                            <option value="一般">一般</option>
+                            <option value="观察项">观察项</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不符合事实描述</label>
+                    <textarea id="description" name="description" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">条款引用</label>
+                        <input type="text" id="clauseReference" name="clause_reference" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">责任人</label>
+                        <input type="text" id="responsiblePerson" name="responsible_person" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正</label>
+                    <textarea id="correction" name="correction" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">不合格调查</label>
+                    <textarea id="investigation" name="investigation" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">纠正/预防措施CAPA</label>
+                    <textarea id="capaAction" name="capa_action" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">整改完成日期</label>
+                        <input type="date" id="dueDate" name="due_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select id="status" name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" disabled>
+                            <option value="open">待处理</option>
+                            <option value="in_progress">处理中</option>
+                            <option value="corrected">已纠正</option>
+                            <option value="verified">已验证</option>
+                            <option value="closed">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">验证结果</label>
+                    <textarea id="verificationResult" name="verification_result" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm readonly-field" readonly placeholder="验证整改效果的结果"></textarea>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        let capaId = null;
+        let auditId = null;
+        let originalData = null;
+        let isEditMode = false;
+
+        // 获取URL参数
+        function getUrlParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // 返回上一页
+        function goBack() {
+            if (auditId) {
+                window.location.href = `external-audit-detail.html?id=${auditId}`;
+            } else {
+                window.location.href = 'external-audit.html';
+            }
+        }
+
+        // 初始化
+        async function init() {
+            capaId = getUrlParam('id');
+            if (!capaId) {
+                alert('缺少CAPA ID');
+                goBack();
+                return;
+            }
+            await loadCAPA();
+        }
+
+        // 加载CAPA数据
+        async function loadCAPA() {
+            try {
+                const res = await fetch(`/audit/api/external-capa/${capaId}`);
+                const result = await res.json();
+                
+                if (result.error || !result.data) {
+                    alert('获取CAPA数据失败');
+                    goBack();
+                    return;
+                }
+
+                const data = result.data;
+                originalData = { ...data };
+                auditId = data.external_audit_id;
+
+                // 填充表单
+                document.getElementById('capaId').value = data.id;
+                document.getElementById('capaNumber').value = data.capa_number || '';
+                document.getElementById('category').value = data.category || '一般';
+                document.getElementById('description').value = data.description || '';
+                document.getElementById('clauseReference').value = data.clause_reference || '';
+                document.getElementById('responsiblePerson').value = data.responsible_person || '';
+                document.getElementById('correction').value = data.correction || '';
+                document.getElementById('investigation').value = data.investigation || '';
+                document.getElementById('capaAction').value = data.capa_action || '';
+                document.getElementById('dueDate').value = data.due_date || '';
+                document.getElementById('status').value = data.status || 'open';
+                document.getElementById('verificationResult').value = data.verification_result || '';
+
+                // 加载外审信息
+                await loadAuditInfo(auditId);
+            } catch (err) {
+                console.error('加载失败:', err);
+                alert('加载数据失败');
+            }
+        }
+
+        // 加载外审信息
+        async function loadAuditInfo(auditId) {
+            try {
+                const res = await fetch(`/audit/api/external-audits/${auditId}`);
+                const result = await res.json();
+                if (result.data) {
+                    document.getElementById('audit-serial').textContent = result.data.serial_number || '-';
+                    document.getElementById('audit-type').textContent = result.data.audit_type || '-';
+                    document.getElementById('audit-project').textContent = result.data.project_number || '-';
+                }
+            } catch (err) {
+                console.error('加载外审信息失败:', err);
+            }
+        }
+
+        // 启用编辑模式
+        function enableEdit() {
+            isEditMode = true;
+            
+            // 显示上传区域
+            document.getElementById('uploadSection').classList.remove('hidden');
+            
+            // 移除readonly样式和属性
+            const fields = document.querySelectorAll('#capaForm input, #capaForm textarea, #capaForm select');
+            fields.forEach(field => {
+                field.classList.remove('readonly-field');
+                field.classList.add('bg-white');
+                field.removeAttribute('readonly');
+                field.removeAttribute('disabled');
+            });
+
+            // 切换按钮
+            document.getElementById('btnEdit').classList.add('hidden');
+            document.getElementById('btnDelete').classList.add('hidden');
+            document.getElementById('btnSave').classList.remove('hidden');
+            document.getElementById('btnCancel').classList.remove('hidden');
+
+            // 设置拖拽上传
+            setupDragDrop();
+        }
+
+        // 取消编辑
+        function cancelEdit() {
+            isEditMode = false;
+            
+            // 恢复原始数据
+            if (originalData) {
+                document.getElementById('capaNumber').value = originalData.capa_number || '';
+                document.getElementById('category').value = originalData.category || '一般';
+                document.getElementById('description').value = originalData.description || '';
+                document.getElementById('clauseReference').value = originalData.clause_reference || '';
+                document.getElementById('responsiblePerson').value = originalData.responsible_person || '';
+                document.getElementById('correction').value = originalData.correction || '';
+                document.getElementById('investigation').value = originalData.investigation || '';
+                document.getElementById('capaAction').value = originalData.capa_action || '';
+                document.getElementById('dueDate').value = originalData.due_date || '';
+                document.getElementById('status').value = originalData.status || 'open';
+                document.getElementById('verificationResult').value = originalData.verification_result || '';
+            }
+
+            // 隐藏上传区域
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('upload-status').textContent = '';
+
+            // 恢复readonly样式
+            const fields = document.querySelectorAll('#capaForm input, #capaForm textarea, #capaForm select');
+            fields.forEach(field => {
+                field.classList.add('readonly-field');
+                field.classList.remove('bg-white');
+                field.setAttribute('readonly', 'readonly');
+                field.setAttribute('disabled', 'disabled');
+            });
+
+            // 切换按钮
+            document.getElementById('btnEdit').classList.remove('hidden');
+            document.getElementById('btnDelete').classList.remove('hidden');
+            document.getElementById('btnSave').classList.add('hidden');
+            document.getElementById('btnCancel').classList.add('hidden');
+        }
+
+        // 保存CAPA
+        async function saveCAPA() {
+            const formData = new FormData(document.getElementById('capaForm'));
+            const data = Object.fromEntries(formData);
+
+            try {
+                const res = await fetch(`/audit/api/external-capa/${capaId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if (result.error) {
+                    if (result.error.includes('UNIQUE constraint')) {
+                        alert('CAPA编号已存在，请修改编号后重试！');
+                        document.getElementById('capaNumber').focus();
+                    } else {
+                        alert('保存失败: ' + result.error);
+                    }
+                    return;
+                }
+
+                alert('保存成功');
+                
+                // 更新原始数据
+                originalData = { ...data, id: capaId };
+                
+                // 退出编辑模式
+                cancelEdit();
+            } catch (err) {
+                console.error('保存失败:', err);
+                alert('保存失败');
+            }
+        }
+
+        // 删除CAPA
+        async function deleteCAPA() {
+            if (!confirm('确定要删除此CAPA吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/audit/api/external-capa/${capaId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await res.json();
+
+                if (result.error) {
+                    alert('删除失败: ' + result.error);
+                    return;
+                }
+
+                alert('删除成功');
+                goBack();
+            } catch (err) {
+                console.error('删除失败:', err);
+                alert('删除失败');
+            }
+        }
+
+        // 设置拖拽上传
+        function setupDragDrop() {
+            const dropZone = document.getElementById('uploadSection');
+            
+            dropZone.ondragover = (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondragleave = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+            };
+
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-500', 'bg-blue-100');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['doc', 'docx', 'pdf'].includes(ext)) {
+                        uploadFile(file);
+                    } else {
+                        document.getElementById('upload-status').textContent = '不支持的文件格式';
+                        document.getElementById('upload-status').className = 'text-sm text-red-600';
+                    }
+                }
+            };
+        }
+
+        // 处理文件上传（点击选择）
+        function handleDocumentUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+            input.value = '';
+        }
+
+        // 上传文件并填充表单
+        async function uploadFile(file) {
+            const statusEl = document.getElementById('upload-status');
+            statusEl.textContent = '正在解析...';
+            statusEl.className = 'text-sm text-blue-600';
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            try {
+                const res = await fetch('/audit/api/parse-capa-document', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+
+                if (result.success && result.data) {
+                    const data = result.data;
+                    if (data.capa_number) document.getElementById('capaNumber').value = data.capa_number;
+                    if (data.description) document.getElementById('description').value = data.description;
+                    if (data.category) document.getElementById('category').value = data.category;
+                    if (data.clause_reference) document.getElementById('clauseReference').value = data.clause_reference;
+                    if (data.responsible_person) document.getElementById('responsiblePerson').value = data.responsible_person;
+                    if (data.correction) document.getElementById('correction').value = data.correction;
+                    if (data.investigation) document.getElementById('investigation').value = data.investigation;
+                    if (data.capa_action) document.getElementById('capaAction').value = data.capa_action;
+                    if (data.due_date) document.getElementById('dueDate').value = data.due_date;
+                    statusEl.textContent = '解析成功';
+                    statusEl.className = 'text-sm text-green-600';
+                } else {
+                    statusEl.textContent = '解析失败';
+                    statusEl.className = 'text-sm text-red-600';
+                }
+            } catch (err) {
+                console.error('上传失败:', err);
+                statusEl.textContent = '上传失败';
+                statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
