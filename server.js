@@ -6,6 +6,7 @@ const cors = require('cors');
 const path = require('path');
 const cron = require('node-cron');
 const XLSX = require('xlsx');
+const session = require('express-session');
 require('dotenv').config();
 
 const agentService = require('./services/agentService');
@@ -14,8 +15,9 @@ const competitorService = require('./services/competitorService');
 const reportService = require('./services/reportService');
 const logger = require('./utils/logger');
 
-// 内审管理系统路由
+// 路由
 const auditRoutes = require('./routes/audit');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,9 +25,53 @@ const PORT = process.env.PORT || 3000;
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// Session配置
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'mdr-platform-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // 开发环境设为false，生产环境应为true
+        maxAge: 24 * 60 * 60 * 1000 // 24小时
+    }
+}));
+
+// 认证中间件 - 排除登录和回调路由
+const authMiddleware = (req, res, next) => {
+    // 排除不需要认证的路由
+    const publicPaths = ['/auth/login', '/auth/callback', '/auth/user'];
+    if (publicPaths.some(p => req.path.startsWith(p))) {
+        return next();
+    }
+    
+    // 静态资源不需要认证
+    if (req.path.match(/\.(css|js|png|jpg|ico|svg)$/)) {
+        return next();
+    }
+    
+    // API路由需要认证（除了特定的公开API）
+    if (req.path.startsWith('/api/')) {
+        if (!req.session.user) {
+            return res.status(401).json({ error: '未登录', needLogin: true });
+        }
+        return next();
+    }
+    
+    // 其他路由需要认证
+    if (!req.session.user) {
+        return res.redirect('/auth/login');
+    }
+    
+    next();
+};
+
+app.use(authMiddleware);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 注册内审管理系统 API 路由
+// 注册路由
+app.use('/auth', authRoutes);
 app.use('/audit', auditRoutes);
 
 // ======== API 路由 ========

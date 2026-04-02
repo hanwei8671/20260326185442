@@ -46,6 +46,20 @@
                         <span class="w-2 h-2 bg-green-400 rounded-full pulse-dot"></span>
                         系统运行正常
                     </span>
+                    <!-- 用户信息 -->
+                    <div id="userInfo" class="flex items-center gap-3 pl-4 border-l border-white/20">
+                        <div class="text-right">
+                            <div id="userName" class="text-sm font-medium">加载中...</div>
+                            <div class="text-xs opacity-70">飞书账号</div>
+                        </div>
+                        <div class="relative">
+                            <img id="userAvatar" src="https://via.placeholder.com/40" alt="用户头像" class="w-10 h-10 rounded-full border-2 border-white/30 object-cover">
+                            <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></span>
+                        </div>
+                        <button onclick="logout()" class="text-sm hover:bg-white/10 px-3 py-1 rounded transition" title="退出登录">
+                            <i class="ri-logout-box-line"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -193,5 +207,39 @@
             <p>医疗器械合规管理平台 &copy; 2026 | 版本 1.0.0</p>
         </div>
     </footer>
+
+    <script>
+        // 获取用户信息
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/auth/user');
+                const data = await response.json();
+                
+                if (data.user) {
+                    document.getElementById('userName').textContent = data.user.name || '未命名';
+                    
+                    if (data.user.avatar) {
+                        document.getElementById('userAvatar').src = data.user.avatar;
+                    }
+                }
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+                // 如果未登录，重定向到登录页
+                if (error.message.includes('401')) {
+                    window.location.href = '/auth/login';
+                }
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/auth/logout';
+            }
+        }
+
+        // 页面加载时获取用户信息
+        loadUserInfo();
+    </script>
 </body>
 </html>
