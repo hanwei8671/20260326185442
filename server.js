@@ -66,9 +66,20 @@ const authMiddleware = (req, res, next) => {
     next();
 };
 
-app.use(authMiddleware);
+// 静态文件不需要认证，放在认证中间件之前
+app.use(express.static(path.join(__dirname, 'public'), {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) {
+            // 禁用 HTML 文件缓存
+            res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        }
+    }
+}));
 
-app.use(express.static(path.join(__dirname, 'public')));
+// 认证中间件 - 只对 API 路由生效，静态文件已在上面处理
+app.use(['/audit', '/api'], authMiddleware);
 
 // 注册路由
 app.use('/auth', authRoutes);
