@@ -683,6 +683,231 @@
         // 初始化
         loadPlanDetail();
         loadNCs();
+
+        // ========== 飞书@提及组件（内嵌版）==========
+        (function() {
+            let panel = null;
+            let list = null;
+            let activeInput = null;
+            let searchTimer = null;
+
+            // 创建选择面板
+            function createPanel() {
+                if (panel) return;
+
+                panel = document.createElement('div');
+                panel.id = 'feishu-mention-panel';
+                panel.innerHTML = `
+                    <div style="padding: 14px 18px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; background: #fafbfc;">
+                        <i class="ri-search-line" style="color: #3370ff; font-size: 18px;"></i>
+                        <input type="text" id="feishu-search" placeholder="搜索飞书联系人..." autocomplete="off" style="flex: 1; border: none; outline: none; font-size: 14px; background: transparent; padding: 7px 10px; border-radius: 9px;">
+                    </div>
+                    <div id="feishu-list" style="max-height: 350px; overflow-y: auto; padding: 8px 0;">
+                        <div style="text-align: center; padding: 28px; color: #aaa; font-size: 14px;">输入关键字搜索...</div>
+                    </div>
+                `;
+                panel.style.cssText = 'position: absolute; z-index: 9999; background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); width: 320px; max-height: 380px; display: none; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; border: 1px solid #e8e8e8;';
+
+                document.body.appendChild(panel);
+
+                // 搜索框事件
+                const searchInput = panel.querySelector('#feishu-search');
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(() => searchContacts(e.target.value.trim()), 300);
+                });
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') hidePanel();
+                    if (e.key === 'Enter') e.preventDefault();
+                });
+
+                // 点击外部关闭
+                document.addEventListener('click', (e) => {
+                    if (panel && !panel.contains(e.target) && e.target !== activeInput) {
+                        hidePanel();
+                    }
+                });
+            }
+
+            // 显示面板
+            function showPanel(inputEl) {
+                createPanel();
+                activeInput = inputEl;
+
+                // 定位面板
+                const rect = inputEl.getBoundingClientRect();
+                let top = rect.bottom + window.scrollY + 6;
+                let left = rect.left + window.scrollX;
+
+                if (top + 400 > window.innerHeight + window.scrollY) {
+                    top = rect.top + window.scrollY - 380;
+                }
+                if (left + 320 > window.innerWidth) {
+                    left = window.innerWidth - 330 + window.scrollX;
+                }
+
+                panel.style.top = top + 'px';
+                panel.style.left = Math.max(8, left) + 'px';
+                panel.style.display = 'block';
+
+                // 清空并聚焦搜索框
+                list = panel.querySelector('#feishu-list');
+                list.innerHTML = '<div style="text-align: center; padding: 28px; color: #aaa; font-size: 14px;">输入关键字搜索联系人...</div>';
+                
+                const searchInput = panel.querySelector('#feishu-search');
+                searchInput.value = '';
+                setTimeout(() => searchInput.focus(), 100);
+            }
+
+            // 隐藏面板
+            function hidePanel() {
+                if (panel) {
+                    panel.style.display = 'none';
+                }
+                activeInput = null;
+                if (searchTimer) {
+                    clearTimeout(searchTimer);
+                    searchTimer = null;
+                }
+            }
+
+            // 搜索联系人
+            async function searchContacts(query) {
+                if (!list) return;
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #3370ff; font-size: 14px;">搜索中...</div>';
+
+                try {
+                    const url = query 
+                        ? `/api/feishu/search-users?keyword=${encodeURIComponent(query)}`
+                        : `/api/feishu/users?page_size=30`;
+                    
+                    const res = await fetch(url);
+                    const data = await res.json();
+
+                    if (!data.success || !data.data || data.data.length === 0) {
+                        list.innerHTML = `<div style="text-align: center; padding: 24px 16px; color: #aaa; font-size: 13px;">${data.hint || '未找到匹配的联系人'}</div>`;
+                        return;
+                    }
+
+                    renderUsers(data.data);
+                } catch (err) {
+                    list.innerHTML = '<div style="text-align: center; padding: 16px; color: #e74c3c; font-size: 13px;">搜索失败: ' + err.message + '</div>';
+                }
+            }
+
+            // 渲染用户列表
+            function renderUsers(users) {
+                if (!list || !users.length) return;
+
+                list.innerHTML = users.map(u => `
+                    <div class="feishu-user-item" data-name="${escapeHtml(u.name)}" style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='#f0f5ff'" onmouseout="this.style.background='transparent'">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0;">
+                            ${u.name.charAt(0)}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 14px; font-weight: 500; color: #333; line-height: 1.3;">${escapeHtml(u.name)}</div>
+                            <div style="font-size: 12px; color: #888; margin-top: 2px; line-height: 1.2;">${escapeHtml(u.department || u.position || '')}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // 点击选择
+                list.querySelectorAll('.feishu-user-item').forEach(item => {
+                    item.addEventListener('click', () => selectUser(item.dataset.name));
+                });
+            }
+
+            // 选择用户
+            function selectUser(name) {
+                if (!activeInput) return;
+
+                const val = activeInput.value;
+                const atIndex = val.lastIndexOf('@');
+                
+                if (atIndex >= 0) {
+                    activeInput.value = val.substring(0, atIndex) + name + ' ';
+                } else {
+                    activeInput.value = (val ? val + ' ' : '') + name + ' ';
+                }
+
+                // 触发change事件
+                activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                activeInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                hidePanel();
+                activeInput.focus();
+            }
+
+            // HTML转义
+            function escapeHtml(str) {
+                if (!str) return '';
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            // 初始化输入框
+            window.initFeishuMention = function(selector) {
+                createPanel();
+                const inputs = typeof selector === 'string' 
+                    ? document.querySelectorAll(selector)
+                    : [selector];
+
+                inputs.forEach(input => {
+                    if (input._feishuMentionInit) return;
+                    input._feishuMentionInit = true;
+
+                    input.addEventListener('keydown', function(e) {
+                        // 检测 @ 键
+                        if (e.key === '@' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                            e.preventDefault();
+                            showPanel(input);
+                        }
+                        if (e.key === 'Escape') hidePanel();
+                    });
+
+                    // placeholder 提示
+                    const origPlaceholder = input.placeholder || '';
+                    if (!origPlaceholder.includes('@')) {
+                        input.placeholder = origPlaceholder + ' (输入@选择飞书联系人)';
+                    }
+                });
+            };
+
+            // 批量初始化
+            window.initAllFeishuMentions = function() {
+                // 监听DOM变化，自动初始化新出现的输入框
+                const observer = new MutationObserver(function(mutations) {
+                    let shouldInit = false;
+                    for (const m of mutations) {
+                        if (m.addedNodes.length > 0) {
+                            for (const node of m.addedNodes) {
+                                if (node.nodeType === 1 && node.querySelector && (
+                                    node.querySelector('input[name="responsible_person"]') ||
+                                    node.querySelector('#edit-nc-responsible')
+                                )) {
+                                    shouldInit = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (shouldInit) setTimeout(init, 100);
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+
+                function init() {
+                    initFeishuMention('input[name="responsible_person"]');
+                    initFeishuMention('#edit-nc-responsible');
+                }
+
+                init(); // 立即初始化已存在的
+            };
+
+            // 自动初始化
+            initAllFeishuMentions();
+        })();
     </script>
 </body>
 </html>
