@@ -905,8 +905,12 @@
                 init(); // 立即初始化已存在的
             };
 
-            // 自动初始化
-            initAllFeishuMentions();
+            // 自动初始化 - 确保DOM完全加载
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initAllFeishuMentions);
+            } else {
+                initAllFeishuMentions();
+            }
         })();
     </script>
 </body>
