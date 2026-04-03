@@ -708,6 +708,132 @@ cron.schedule(cronSchedule, async () => {
   }
 });
 
+// ======== 飞书API路由 ========
+
+const lark = require('@larksuiteoapi/node-sdk');
+
+// 初始化飞书客户端
+let larkClient = null;
+if (process.env.FEISHU_APP_ID && process.env.FEISHU_APP_SECRET) {
+  larkClient = new lark.Client({
+    appId: process.env.FEISHU_APP_ID,
+    appSecret: process.env.FEISHU_APP_SECRET
+  });
+  logger.info('飞书客户端初始化成功');
+}
+
+/**
+ * 获取飞书用户列表
+ */
+app.get('/api/feishu/users', async (req, res) => {
+  try {
+    if (!larkClient) {
+      return res.status(500).json({ success: false, error: '飞书客户端未初始化' });
+    }
+
+    const pageSize = parseInt(req.query.page_size) || 50;
+    
+    const response = await larkClient.contact.user.list({
+      path: {
+        department_id: '0' // 根部门
+      },
+      params: {
+        page_size: pageSize,
+        fetch_option: 0
+      }
+    });
+
+    const users = response.data.items.map(user => ({
+      id: user.open_id,
+      name: user.name,
+      department: user.department_ids && user.department_ids[0] || '',
+      position: user.position || '',
+      email: user.email || '',
+      mobile: user.mobile || ''
+    }));
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    logger.error('获取飞书用户列表失败:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '获取飞书用户列表失败: ' + error.message 
+    });
+  }
+});
+
+/**
+ * 搜索飞书用户
+ */
+app.get('/api/feishu/search-users', async (req, res) => {
+  try {
+    if (!larkClient) {
+      return res.status(500).json({ success: false, error: '飞书客户端未初始化' });
+    }
+
+    const keyword = req.query.keyword || '';
+    const pageSize = parseInt(req.query.page_size) || 20;
+    
+    // 使用用户搜索接口
+    const response = await larkClient.contact.user.findByDepartment({
+      path: {
+        department_id: '0'
+      },
+      params: {
+        page_size: pageSize,
+        query: keyword
+      }
+    });
+
+    const users = (response.data.items || []).map(user => ({
+      id: user.open_id,
+      name: user.name,
+      department: user.department_ids && user.department_ids[0] || '',
+      position: user.position || '',
+      email: user.email || '',
+      mobile: user.mobile || ''
+    }));
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    logger.error('搜索飞书用户失败:', error);
+    
+    // 如果搜索接口失败，回退到获取全部用户再过滤
+    try {
+      const allUsersResponse = await larkClient.contact.user.list({
+        path: {
+          department_id: '0'
+        },
+        params: {
+          page_size: 50,
+          fetch_option: 0
+        }
+      });
+
+      const keyword = req.query.keyword || '';
+      const users = allUsersResponse.data.items
+        .filter(user => user.name.includes(keyword) || 
+                       (user.email && user.email.includes(keyword)))
+        .map(user => ({
+          id: user.open_id,
+          name: user.name,
+          department: user.department_ids && user.department_ids[0] || '',
+          position: user.position || '',
+          email: user.email || '',
+          mobile: user.mobile || ''
+        }));
+
+      res.json({ success: true, data: users });
+    } catch (fallbackError) {
+      logger.error('回退方案也失败:', fallbackError);
+      res.status(500).json({ 
+        success: false, 
+        error: '搜索飞书用户失败' 
+      });
+    }
+  }
+});
+
 // ======== 启动服务 ========
 
 app.listen(PORT, '0.0.0.0', () => {
